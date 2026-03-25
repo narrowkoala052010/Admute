@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venvmute/
+venv/
+.env
+
+# AdMute Data
+admute.db
+admute.db-shm
+admute.db-wal
+logs/
+recordings/
+fingerprints/
+
+# OS Files
+.DS_Store
+Thumbs.db

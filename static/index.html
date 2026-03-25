@@ -2265,6 +2265,7 @@ function admute() {
     // ── Toasts ─────────────────────────────────────────────────
     toasts: [],
     _toastId: 0,
+    _authFailed: false,
 
     // ─────────────────────────────────────────────────────────────
     // INIT
@@ -2340,9 +2341,15 @@ function admute() {
 
       const r = await fetch(this.apiUrl(path), opts);
       if (r.status === 401) {
-        this.toast('Authentication failed — check secret in Settings', 'error');
-        throw new Error('unauthorized');
+          // Only show the toast once — stop spamming
+          if (!this._authFailed) {
+              this._authFailed = true;
+              this.toast('Authentication failed — check secret in Settings', 'error');
+          }
+          throw new Error('unauthorized');
       }
+      // Clear the flag on any successful request
+      this._authFailed = false;
       return r.json();
     },
 
@@ -2577,18 +2584,19 @@ function admute() {
     // ─────────────────────────────────────────────────────────────
     async loadStats() {
       try {
-        const [summary, log, snrHist] = await Promise.all([
-          this.api('GET', '/api/stats/summary'),
-          this.api('GET', '/api/stats/mute-log?page=1&limit=20'),
-          this.api('GET', '/api/stats/snr-history'),
-        ]);
-        this.stats        = summary;
+        const summary = await this.api('GET', '/api/stats/summary');
+        this.stats = summary;
+
+        const log = await this.api('GET', '/api/stats/mute-log?page=1&limit=20');
         this.muteLog      = log.items || [];
         this.muteLogTotal = log.total || 0;
         this.muteLogPage  = 1;
-        this.snrHistory   = snrHist || [];
+
+        const snrHist = await this.api('GET', '/api/stats/snr-history');
+        this.snrHistory = snrHist || [];
+
       } catch(e) {
-        this.toast('Could not load stats', 'error');
+          this.toast('Could not load stats', 'error');
       }
     },
 
@@ -2647,6 +2655,7 @@ function admute() {
         piAddress: this.piAddress,
         apiSecret: this.apiSecret,
       }));
+      this._authFailed = false;
       this.toast('Connection settings saved', 'success');
       this.showSettings = false;
     },

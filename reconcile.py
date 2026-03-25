@@ -63,7 +63,7 @@ def run_reconcile(fix: bool = False, yes: bool = False) -> None:
         if rec_dir.exists():
             wav_files = list(rec_dir.glob("*.wav"))
             known_paths = {
-                row[0] for row in
+                Path(row[0]).name for row in
                 conn.execute("SELECT file_path FROM recordings").fetchall()
             }
             orphan_wavs = [f for f in wav_files if str(f) not in known_paths]
@@ -86,7 +86,7 @@ def run_reconcile(fix: bool = False, yes: bool = False) -> None:
         print(f"{BOLD}[2] Dead recording rows{RESET} (DB row, missing WAV file)")
 
         rows = conn.execute(
-            "SELECT id, file_path, status FROM recordings"
+            "SELECT id, file_path, status FROM recordings WHERE status != 'rejected'"
         ).fetchall()
 
         dead_rows = [r for r in rows if not Path(r[1]).exists()]
@@ -172,7 +172,8 @@ def run_reconcile(fix: bool = False, yes: bool = False) -> None:
             """SELECT a.id, a.name, a.hash_count
                FROM ads a
                LEFT JOIN recordings r ON r.ad_id = a.id
-               WHERE r.id IS NULL"""
+               WHERE r.id IS NULL
+               AND a.is_active = 1"""
         ).fetchall()
 
         if not unlinked:
@@ -182,7 +183,7 @@ def run_reconcile(fix: bool = False, yes: bool = False) -> None:
                 bad(f"Unlinked ad: id={a[0]}  name=\"{a[1]}\"  hashes={a[2]}")
                 issues.append(f"unlinked_ad:{a[0]}")
                 if fix:
-                    fixes.append(("deactivate_ad", a[0]))
+                    fixes.append(("purge_unlinked_ad", a[0]))
 
         # ── SUMMARY ───────────────────────────────────────────────
         print("─" * 50)
@@ -228,17 +229,24 @@ def run_reconcile(fix: bool = False, yes: bool = False) -> None:
                     applied += 1
                 except Exception as e:
                     bad(f"Could not update row {target}: {e}")
+                    
+            elif action == "purge_unlinked_ad":
+                try:
+                    conn.execute("DELETE FROM hashes WHERE ad_id=?", (target,))
+                    conn.execute("DELETE FROM ads WHERE id=?", (target,))
+                    fixed(f"Purged unlinked ad id={target} and all its hashes")
+                    applied += 1
+                except Exception as e:
+                    bad(f"Could not purge ad {target}: {e}")
 
             elif action == "deactivate_ad":
                 try:
-                    conn.execute(
-                        "UPDATE ads SET is_active=0 WHERE id=?",
-                        (target,)
-                    )
-                    fixed(f"Deactivated ghost ad id={target}")
+                    conn.execute("DELETE FROM hashes WHERE ad_id=?", (target,))
+                    conn.execute("DELETE FROM ads WHERE id=?", (target,))
+                    fixed(f"Purged unlinked ad id={target} and all its hashes")
                     applied += 1
                 except Exception as e:
-                    bad(f"Could not deactivate ad {target}: {e}")
+                    bad(f"Could not purge ad {target}: {e}")
 
             elif action == "delete_orphan_hashes":
                 try:

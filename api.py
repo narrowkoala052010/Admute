@@ -82,8 +82,8 @@ def _verify_hmac(request_method: str, request_path: str,
         timestamp_str, sig = token.split(".", 1)
         timestamp          = int(timestamp_str)
 
-        # Replay protection — reject requests older than 60s
-        if abs(time.time() - timestamp) > 60:
+        # Replay protection — reject requests older than 120s
+        if abs(time.time() - timestamp) > 120:
             return False
 
         message = (timestamp_str + request_method +
@@ -139,7 +139,7 @@ def auth_middleware(secret: str):
         auth = request.headers.get("Authorization", "")
         body = await request.read()
 
-        if not _verify_hmac(request.method, request.path,
+        if not _verify_hmac(request.method, request.path_qs,
                              body, auth, secret):
             return web.json_response(
                 {"error": "Unauthorized"}, status=401

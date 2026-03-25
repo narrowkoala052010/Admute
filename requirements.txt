@@ -1,0 +1,22 @@
+# AdMute v4 — Python Dependencies
+# Install with: pip install -r requirements.txt
+ 
+# Audio capture
+pyaudio>=0.2.14
+ 
+# Signal processing
+numpy>=1.24.0
+scipy>=1.10.0
+ 
+# Inter-process messaging
+pyzmq>=25.0.0
+ 
+# Web API server
+aiohttp>=3.9.0
+aiofiles>=23.0.0
+ 
+# Configuration
+# tomllib is included in Python 3.11+
+# For Python 3.10 and below, uncomment the line below:
+# tomli>=2.0.0
+ 

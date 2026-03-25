@@ -177,9 +177,11 @@ def main():
 
                 # Cool-down before restart to avoid tight crash loops
                 backoff = min(2 ** count, 30)
-                log.info("Waiting %ds before restarting %s",
-                         backoff, name, extra=_extra(PROC))
-                time.sleep(backoff)
+                log.info("Waiting %ds before restarting %s", backoff, name)
+                for _ in range(backoff * 10):
+                    if shutdown_requested:
+                        return
+                    time.sleep(0.1)
 
                 processes[name] = start_process(name, target, args)
 

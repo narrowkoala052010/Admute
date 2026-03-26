@@ -4,1482 +4,1552 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#080B0F">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#000000">
 <title>AdMute</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <style>
-/* ── DESIGN TOKENS ─────────────────────────────────────── */
+
+/* ── DESIGN SYSTEM ─────────────────────────────────────────── */
 :root {
-  --bg0:        #060910;
-  --bg1:        #0C1018;
-  --bg2:        #131922;
-  --bg3:        #1A2333;
-  --bg4:        #232E42;
-  --amber:      #F5A623;
-  --amber-dim:  #7A5311;
-  --amber-glow: rgba(245,166,35,0.15);
-  --green:      #1DB954;
-  --green-dim:  #0E5C2A;
-  --green-glow: rgba(29,185,84,0.15);
-  --red:        #E8414B;
-  --red-dim:    #6B1E22;
-  --red-glow:   rgba(232,65,75,0.15);
-  --blue:       #4A9EFF;
-  --text0:      #EEF2FF;
-  --text1:      #94A3B8;
-  --text2:      #4A5568;
-  --border:     rgba(255,255,255,0.06);
-  --border2:    rgba(255,255,255,0.12);
-  --font-display: 'Syne', sans-serif;
-  --font-mono:    'JetBrains Mono', monospace;
-  --radius:     14px;
-  --radius-sm:  8px;
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* OLED black palette */
+  --void:    #000000;
+  --ink0:    #080808;
+  --ink1:    #111111;
+  --ink2:    #1A1A1A;
+  --ink3:    #242424;
+  --ink4:    #333333;
+
+  /* Cyber Lime — the only color that matters */
+  --lime:       #CCFF00;
+  --lime-dim:   rgba(204,255,0,0.12);
+  --lime-glow:  rgba(204,255,0,0.06);
+  --lime-soft:  rgba(204,255,0,0.25);
+
+  /* State colors — kept muted, lime dominates */
+  --red:     #FF3B30;
+  --red-dim: rgba(255,59,48,0.10);
+  --amber:   #FF9F0A;
+
+  /* Text */
+  --t0: #FFFFFF;
+  --t1: #888888;
+  --t2: #444444;
+  --t3: #222222;
+
+  /* Type */
+  --font-d: 'Barlow Condensed', sans-serif;
+  --font-m: 'JetBrains Mono', monospace;
+
+  /* Geometry */
+  --r:    12px;
+  --r-sm:  8px;
+  --r-lg: 20px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
 }
 
-/* ── RESET ─────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { height: 100%; overflow: hidden; }
-body {
-  font-family: var(--font-display);
-  background: var(--bg0);
-  color: var(--text0);
-  height: 100%;
-  overflow: hidden;
-  -webkit-font-smoothing: antialiased;
-  -webkit-tap-highlight-color: transparent;
+/* ── RESET ──────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{height:100%;overflow:hidden;background:var(--void);}
+body{
+  font-family:var(--font-d);
+  background:var(--void);
+  color:var(--t0);
+  height:100%;
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+  -webkit-tap-highlight-color:transparent;
+  letter-spacing:0.01em;
+}
+[x-cloak]{display:none!important;}
+
+/* ── APP SHELL ──────────────────────────────────────────────── */
+#app{
+  display:flex;
+  flex-direction:column;
+  height:100dvh;
 }
 
-/* ── LAYOUT ────────────────────────────────────────────── */
-#app {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  height: 100dvh;
+.scroll-area{
+  flex:1;
+  overflow-y:auto;
+  overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  padding:0 14px calc(76px + var(--safe-b));
 }
 
-.main-scroll {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  padding: 0 16px;
-  padding-bottom: calc(80px + var(--safe-bottom));
+/* ── HEADER ─────────────────────────────────────────────────── */
+.hdr{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:12px 14px 10px;
+  padding-top:calc(12px + var(--safe-t));
+  flex-shrink:0;
+  position:relative;
+}
+.hdr::after{
+  content:'';
+  position:absolute;
+  bottom:0;left:14px;right:14px;
+  height:1px;
+  background:var(--ink3);
 }
 
-/* ── HEADER ────────────────────────────────────────────── */
-.app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px 10px;
-  padding-top: calc(14px + env(safe-area-inset-top, 0px));
-  flex-shrink: 0;
-  background: var(--bg0);
-  position: relative;
-  z-index: 10;
+.wordmark{
+  font-size:22px;
+  font-weight:900;
+  letter-spacing:0.05em;
+  text-transform:uppercase;
+  color:var(--t0);
+}
+.wordmark em{
+  font-style:normal;
+  color:var(--lime);
 }
 
-.app-header::after {
-  content: '';
-  position: absolute;
-  bottom: 0; left: 16px; right: 16px;
-  height: 1px;
-  background: var(--border);
+.hdr-right{
+  display:flex;
+  align-items:center;
+  gap:10px;
 }
 
-.logo {
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: -0.5px;
-  color: var(--text0);
+.uptime-pill{
+  font-family:var(--font-m);
+  font-size:10px;
+  color:var(--t2);
+  background:var(--ink1);
+  border:1px solid var(--ink3);
+  border-radius:20px;
+  padding:4px 10px;
+  display:flex;
+  align-items:center;
+  gap:5px;
 }
 
-.logo span {
-  color: var(--amber);
+.status-led{
+  width:5px;height:5px;
+  border-radius:50%;
+  background:var(--lime);
+  box-shadow:0 0 6px var(--lime);
 }
 
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.status-led.offline{background:var(--red);box-shadow:0 0 6px var(--red);}
+
+.icon-btn{
+  width:36px;height:36px;
+  border-radius:50%;
+  background:var(--ink1);
+  border:1px solid var(--ink3);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+  color:var(--t1);
+  transition:all .15s;
+}
+.icon-btn:active{background:var(--ink2);transform:scale(.92);}
+.icon-btn svg{width:16px;height:16px;}
+
+/* ── BOTTOM NAV ─────────────────────────────────────────────── */
+.nav{
+  display:flex;
+  background:var(--ink0);
+  border-top:1px solid var(--ink2);
+  padding-bottom:var(--safe-b);
+  flex-shrink:0;
+  position:relative;
+  z-index:10;
 }
 
-.icon-btn {
-  width: 38px; height: 38px;
-  border-radius: 50%;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  color: var(--text1);
-  transition: all 0.2s;
-  flex-shrink: 0;
-}
-.icon-btn:active { transform: scale(0.92); background: var(--bg3); }
-.icon-btn svg { width: 18px; height: 18px; }
-
-/* ── BOTTOM NAV ────────────────────────────────────────── */
-.bottom-nav {
-  display: flex;
-  background: var(--bg1);
-  border-top: 1px solid var(--border);
-  padding-bottom: var(--safe-bottom);
-  flex-shrink: 0;
-  position: relative;
-  z-index: 10;
+.nav-item{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:10px 0 8px;
+  cursor:pointer;
+  gap:4px;
+  color:var(--t2);
+  font-size:9px;
+  font-weight:700;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  transition:color .2s;
 }
 
-.nav-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 10px 0;
-  cursor: pointer;
-  gap: 4px;
-  transition: color 0.2s;
-  color: var(--text2);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
+.nav-item.active{color:var(--lime);}
+.nav-item svg{width:22px;height:22px;}
+
+.nav-dot{
+  width:3px;height:3px;
+  border-radius:50%;
+  background:var(--lime);
+  opacity:0;
+  transition:opacity .2s;
+}
+.nav-item.active .nav-dot{opacity:1;}
+
+/* ── STATUS HERO ────────────────────────────────────────────── */
+.status-hero{
+  border-radius:var(--r-lg);
+  padding:20px;
+  margin:14px 0 12px;
+  position:relative;
+  overflow:hidden;
+  border:1px solid var(--ink3);
+  transition:all .4s cubic-bezier(.4,0,.2,1);
+  background:var(--ink0);
 }
 
-.nav-item.active { color: var(--amber); }
-.nav-item svg { width: 22px; height: 22px; }
-.nav-item .nav-dot {
-  width: 4px; height: 4px; border-radius: 50%;
-  background: var(--amber);
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-.nav-item.active .nav-dot { opacity: 1; }
-
-/* ── STATUS BANNER ─────────────────────────────────────── */
-.status-banner {
-  border-radius: var(--radius);
-  padding: 20px;
-  margin: 16px 0 12px;
-  position: relative;
-  overflow: hidden;
-  transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
+.status-hero.muted{
+  border-color:rgba(255,59,48,.3);
+  background:linear-gradient(135deg, #0D0000, var(--ink0));
 }
 
-.status-banner.listening {
-  background: linear-gradient(135deg, var(--bg2), #0B1A12);
-  border: 1px solid var(--green-dim);
+.status-hero.listening{
+  border-color:rgba(204,255,0,.15);
+  background:linear-gradient(135deg, #040800, var(--ink0));
 }
 
-.status-banner.muted {
-  background: linear-gradient(135deg, var(--bg2), #1A0B0C);
-  border: 1px solid var(--red-dim);
-}
-
-.status-banner.mic-off {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-}
-
-/* Scanline texture on muted state */
-.status-banner.muted::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
+/* scanline effect when muted */
+.status-hero.muted::before{
+  content:'';
+  position:absolute;inset:0;
+  background:repeating-linear-gradient(
     0deg,
     transparent,
-    transparent 2px,
-    rgba(232,65,75,0.03) 2px,
-    rgba(232,65,75,0.03) 4px
+    transparent 3px,
+    rgba(255,59,48,.025) 3px,
+    rgba(255,59,48,.025) 4px
   );
-  pointer-events: none;
+  pointer-events:none;
 }
 
-.status-top {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 6px;
+.status-row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:8px;
 }
 
-.status-dot {
-  width: 10px; height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
+.s-dot{
+  width:8px;height:8px;
+  border-radius:50%;
+  flex-shrink:0;
 }
 
-.listening .status-dot {
-  background: var(--green);
-  box-shadow: 0 0 0 0 rgba(29,185,84,0.4);
-  animation: pulse-green 2s infinite;
+.listening .s-dot{
+  background:var(--lime);
+  box-shadow:0 0 0 0 rgba(204,255,0,.5);
+  animation:pulse-lime 2.5s infinite;
 }
 
-.muted .status-dot {
-  background: var(--red);
-  box-shadow: 0 0 0 0 rgba(232,65,75,0.4);
-  animation: pulse-red 1.5s infinite;
+.muted .s-dot{
+  background:var(--red);
+  box-shadow:0 0 0 0 rgba(255,59,48,.5);
+  animation:pulse-red 1.5s infinite;
 }
 
-.mic-off .status-dot { background: var(--text2); }
+.mic-off .s-dot{background:var(--t2);}
 
-@keyframes pulse-green {
-  0%   { box-shadow: 0 0 0 0   rgba(29,185,84,0.4); }
-  70%  { box-shadow: 0 0 0 10px rgba(29,185,84,0); }
-  100% { box-shadow: 0 0 0 0   rgba(29,185,84,0); }
+@keyframes pulse-lime{
+  0%  {box-shadow:0 0 0 0   rgba(204,255,0,.5);}
+  70% {box-shadow:0 0 0 12px rgba(204,255,0,0);}
+  100%{box-shadow:0 0 0 0   rgba(204,255,0,0);}
 }
 
-@keyframes pulse-red {
-  0%   { box-shadow: 0 0 0 0   rgba(232,65,75,0.4); }
-  70%  { box-shadow: 0 0 0 10px rgba(232,65,75,0); }
-  100% { box-shadow: 0 0 0 0   rgba(232,65,75,0); }
+@keyframes pulse-red{
+  0%  {box-shadow:0 0 0 0   rgba(255,59,48,.5);}
+  70% {box-shadow:0 0 0 12px rgba(255,59,48,0);}
+  100%{box-shadow:0 0 0 0   rgba(255,59,48,0);}
 }
 
-.status-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--text1);
+.s-label{
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.15em;
+  text-transform:uppercase;
 }
 
-.listening .status-label { color: var(--green); }
-.muted    .status-label  { color: var(--red); }
+.listening .s-label{color:var(--lime);}
+.muted .s-label{color:var(--red);}
+.mic-off .s-label{color:var(--t2);}
 
-.status-ad-name {
-  font-size: 22px;
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--text0);
-  margin-bottom: 8px;
+.s-ad-name{
+  font-size:26px;
+  font-weight:800;
+  line-height:1.1;
+  letter-spacing:-.01em;
+  color:var(--t0);
+  margin-bottom:10px;
 }
 
-.status-countdown {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  color: var(--text1);
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.s-sub{
+  font-family:var(--font-m);
+  font-size:11px;
+  color:var(--t1);
 }
 
-.countdown-bar {
-  flex: 1;
-  height: 3px;
-  background: var(--bg4);
-  border-radius: 2px;
-  overflow: hidden;
+.s-vault{
+  font-family:var(--font-m);
+  font-size:12px;
+  color:var(--t2);
+  margin-top:4px;
 }
 
-.countdown-fill {
-  height: 100%;
-  background: var(--red);
-  border-radius: 2px;
-  transition: width 1s linear;
-}
-
-/* ── CONTROL BUTTONS ───────────────────────────────────── */
-.btn-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-
-.ctrl-btn {
-  width: 100%;
-  height: 72px;
-  border-radius: var(--radius);
-  border: none;
-  cursor: pointer;
-  font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  transition: all 0.15s;
-  position: relative;
-  overflow: hidden;
-}
-
-.ctrl-btn:active { transform: scale(0.97); }
-.ctrl-btn svg { width: 22px; height: 22px; flex-shrink: 0; }
-
-.ctrl-btn.btn-mute {
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  color: var(--text0);
-}
-
-.ctrl-btn.btn-mute.is-muted {
-  background: var(--red-glow);
-  border-color: var(--red-dim);
-  color: var(--red);
-}
-
-.ctrl-btn.btn-record {
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  color: var(--text0);
-}
-
-.ctrl-btn.btn-record.recording {
-  background: var(--red-glow);
-  border-color: var(--red);
-  color: var(--red);
-}
-
-/* Radar pulse rings on record button */
-.record-rings {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.record-rings::before,
-.record-rings::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: var(--radius);
-  border: 1px solid var(--red);
-  animation: radar 2s linear infinite;
-  opacity: 0;
-}
-
-.record-rings::after { animation-delay: 1s; }
-
-@keyframes radar {
-  0%   { transform: scale(1);    opacity: 0.6; }
-  100% { transform: scale(1.08); opacity: 0;   }
-}
-
-.ctrl-btn.btn-fp {
-  background: var(--amber-glow);
-  border: 1px solid var(--amber-dim);
-  color: var(--amber);
-}
-
-.ctrl-btn.btn-fp:active { background: rgba(245,166,35,0.25); }
-
-/* ── MIC TOGGLE ROW ────────────────────────────────────── */
-.mic-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px 16px;
-  margin-bottom: 12px;
-}
-
-.mic-label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text1);
-}
-
-.mic-label svg { width: 18px; height: 18px; }
-
-/* Toggle switch */
-.toggle {
-  width: 50px; height: 28px;
-  background: var(--bg4);
-  border-radius: 14px;
-  cursor: pointer;
-  transition: background 0.2s;
-  position: relative;
-  flex-shrink: 0;
-}
-
-.toggle.on { background: var(--green); }
-
-.toggle::after {
-  content: '';
-  position: absolute;
-  width: 22px; height: 22px;
-  border-radius: 50%;
-  background: white;
-  top: 3px; left: 3px;
-  transition: transform 0.2s cubic-bezier(0.4,0,0.2,1);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
-}
-
-.toggle.on::after { transform: translateX(22px); }
-
-/* ── SNR BADGE ─────────────────────────────────────────── */
-.snr-badge {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 10px 14px;
-  cursor: pointer;
-  transition: border-color 0.2s;
-  margin-bottom: 16px;
-}
-
-.snr-badge:active { background: var(--bg3); }
-
-.snr-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--text2);
-  flex-shrink: 0;
-}
-
-.snr-bar-wrap {
-  flex: 1;
-  height: 4px;
-  background: var(--bg4);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.snr-bar-fill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 0.6s ease;
-}
-
-.snr-val {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.snr-pass { color: var(--green); }
-.snr-warn { color: var(--amber); }
-.snr-fail { color: var(--red); }
-
-/* ── CARDS (shared) ────────────────────────────────────── */
-.card {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  transition: border-color 0.2s;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px;
-  cursor: pointer;
-}
-
-.card-header:active { background: var(--bg3); }
-
-/* ── STATUS BADGE PILLS ────────────────────────────────── */
-.pill {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  padding: 3px 8px;
-  border-radius: 20px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.pill-pending  { background: var(--bg3); color: var(--text1); }
-.pill-ingested { background: var(--green-dim); color: var(--green); }
-.pill-rejected { background: var(--red-dim); color: var(--red); }
-
-/* ── RECORDINGS ────────────────────────────────────────── */
-.rec-card {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  margin-bottom: 10px;
-  overflow: hidden;
-  transition: border-color 0.2s;
-}
-
-.rec-card.expanded { border-color: var(--border2); }
-
-.rec-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px;
-  cursor: pointer;
-}
-
-.rec-header:active { background: var(--bg3); }
-
-.rec-waveform {
-  width: 72px;
-  height: 36px;
-  border-radius: 6px;
-  overflow: hidden;
-  flex-shrink: 0;
-  background: var(--bg3);
-}
-
-.rec-info { flex: 1; min-width: 0; }
-
-.rec-time {
-  font-size: 12px;
-  color: var(--text1);
-  margin-top: 3px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.rec-dur {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  background: var(--bg3);
-  padding: 2px 6px;
-  border-radius: 4px;
-  color: var(--text1);
-}
-
-.rec-body {
-  padding: 0 14px 14px;
-  border-top: 1px solid var(--border);
-}
-
-.rec-audio-player {
-  width: 100%;
-  margin: 12px 0;
-  accent-color: var(--amber);
-}
-
-audio { width: 100%; }
-
-/* Custom audio player styling */
-audio::-webkit-media-controls-panel {
-  background: var(--bg3);
-}
-
-.form-group {
-  margin-bottom: 10px;
-}
-
-.form-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  color: var(--text2);
-  margin-bottom: 5px;
-  display: block;
-}
-
-.form-select, .form-input {
-  width: 100%;
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text0);
-  font-family: var(--font-display);
-  font-size: 14px;
-  padding: 10px 12px;
-  appearance: none;
-  -webkit-appearance: none;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.form-select:focus, .form-input:focus {
-  border-color: var(--amber);
-}
-
-.form-select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394A3B8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-  background-size: 16px;
-  padding-right: 32px;
-}
-
-.form-textarea {
-  resize: none;
-  height: 70px;
-}
-
-.btn-row {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.btn-sm {
-  flex: 1;
-  height: 44px;
-  border-radius: var(--radius-sm);
-  border: none;
-  cursor: pointer;
-  font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  transition: all 0.15s;
-}
-
-.btn-sm:active { transform: scale(0.96); }
-.btn-sm svg { width: 16px; height: 16px; }
-
-.btn-primary {
-  background: var(--amber);
-  color: var(--bg0);
-}
-
-.btn-secondary {
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  color: var(--text0);
-}
-
-.btn-danger {
-  background: var(--red-glow);
-  border: 1px solid var(--red-dim);
-  color: var(--red);
-}
-
-.btn-green {
-  background: var(--green-glow);
-  border: 1px solid var(--green-dim);
-  color: var(--green);
-}
-
-.btn-sm:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-/* Delete confirm inline */
-.delete-confirm {
-  background: var(--red-glow);
-  border: 1px solid var(--red-dim);
-  border-radius: var(--radius-sm);
-  padding: 12px;
-  margin-top: 10px;
-}
-
-.delete-confirm p {
-  font-size: 12px;
-  color: var(--text1);
-  margin-bottom: 10px;
-  line-height: 1.5;
-}
-
-/* ── STATS ─────────────────────────────────────────────── */
-.hero-card {
-  background: linear-gradient(135deg, var(--bg2), #0D1520);
-  border: 1px solid var(--border2);
-  border-radius: var(--radius);
-  padding: 28px 20px;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-  margin-bottom: 12px;
-}
-
-.hero-card::before {
-  content: '';
-  position: absolute;
-  top: -40px; right: -40px;
-  width: 120px; height: 120px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(245,166,35,0.08), transparent 70%);
-}
-
-.hero-num {
-  font-size: 56px;
-  font-weight: 800;
-  line-height: 1;
-  color: var(--amber);
-  letter-spacing: -2px;
-  font-variant-numeric: tabular-nums;
-}
-
-.hero-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text1);
-  margin-top: 4px;
-  letter-spacing: 0.5px;
-}
-
-.hero-sub {
-  font-size: 11px;
-  color: var(--text2);
-  margin-top: 6px;
-  font-family: var(--font-mono);
-}
-
-.metric-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.metric-card {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 14px 10px;
-  text-align: center;
-  cursor: pointer;
-  transition: border-color 0.2s;
-}
-
-.metric-card:active { border-color: var(--border2); }
-
-.metric-num {
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--text0);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.5px;
-}
-
-.metric-label {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  color: var(--text2);
-  margin-top: 3px;
-}
-
-.section-title {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  color: var(--text2);
-  margin: 16px 0 10px;
-}
-
-/* Top muted ads bars */
-.top-ad-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.top-ad-row:last-child { border-bottom: none; }
-
-.top-ad-rank {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text2);
-  width: 16px;
-  flex-shrink: 0;
-}
-
-.top-ad-info { flex: 1; min-width: 0; }
-
-.top-ad-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text0);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.top-ad-service {
-  font-size: 10px;
-  color: var(--text2);
-  margin-top: 2px;
-}
-
-.top-ad-bar-wrap {
-  width: 80px;
-  flex-shrink: 0;
-}
-
-.top-ad-bar-bg {
-  height: 4px;
-  background: var(--bg4);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.top-ad-bar-fill {
-  height: 100%;
-  background: var(--amber);
-  border-radius: 2px;
-  transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
-}
-
-.top-ad-count {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--amber);
-  text-align: right;
-  margin-top: 2px;
-}
-
-/* Mute log rows */
-.log-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.log-row:last-child { border-bottom: none; }
-.log-row.fp { background: rgba(232,65,75,0.04); margin: 0 -4px; padding: 11px 4px; border-radius: 4px; }
-
-.log-ad { flex: 1; min-width: 0; }
-
-.log-ad-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text0);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.log-meta {
-  font-size: 10px;
-  color: var(--text2);
-  margin-top: 2px;
-  font-family: var(--font-mono);
-}
-
-.log-right {
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.log-dur {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--text1);
-}
-
-.log-time {
-  font-size: 10px;
-  color: var(--text2);
-  margin-top: 2px;
-}
-
-.fp-badge {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  color: var(--red);
-  background: var(--red-glow);
-  border: 1px solid var(--red-dim);
-  padding: 2px 5px;
-  border-radius: 3px;
-}
-
-.load-more-btn {
-  width: 100%;
-  height: 44px;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text1);
-  font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  margin-top: 10px;
-  transition: all 0.2s;
-}
-
-.load-more-btn:active { background: var(--bg3); }
-
-/* SNR history dots */
-.snr-hist-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.snr-hist-row:last-child { border-bottom: none; }
-
-.snr-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.snr-dot.pass { background: var(--green); }
-.snr-dot.warn { background: var(--amber); }
-.snr-dot.fail { background: var(--red); }
-
-/* ── SETTINGS ──────────────────────────────────────────── */
-.settings-panel {
-  position: fixed;
-  inset: 0;
-  background: var(--bg0);
-  z-index: 100;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  transform: translateX(100%);
-  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
-}
-
-.settings-panel.open { transform: translateX(0); }
-
-.settings-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px;
-  padding-top: calc(14px + env(safe-area-inset-top, 0px));
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  background: var(--bg0);
-  z-index: 1;
-}
-
-.settings-title {
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.settings-body {
-  padding: 16px;
-  padding-bottom: calc(32px + var(--safe-bottom));
-}
-
-.settings-section {
-  margin-bottom: 24px;
-}
-
-.settings-section-title {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--amber);
-  margin-bottom: 10px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--amber-dim);
-}
-
-.settings-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.settings-row:last-child { border-bottom: none; }
-
-.settings-row-label { font-size: 14px; font-weight: 500; }
-.settings-row-sub {
-  font-size: 11px;
-  color: var(--text2);
-  margin-top: 2px;
-  font-family: var(--font-mono);
-}
-
-.danger-btn {
-  width: 100%;
-  height: 48px;
-  background: var(--red-glow);
-  border: 1px solid var(--red-dim);
-  border-radius: var(--radius-sm);
-  color: var(--red);
-  font-family: var(--font-display);
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  margin-bottom: 10px;
-  transition: all 0.15s;
-}
-
-.danger-btn:active { background: rgba(232,65,75,0.2); }
-
-/* Slider */
-.slider-wrap { display: flex; align-items: center; gap: 10px; }
-input[type=range] {
-  flex: 1;
-  accent-color: var(--amber);
-  height: 4px;
-  cursor: pointer;
-}
-
-.slider-val {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--amber);
-  min-width: 40px;
-  text-align: right;
-}
-
-/* Radio group */
-.radio-group {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.radio-option {
-  flex: 1;
-  height: 40px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s;
-  color: var(--text1);
-}
-
-.radio-option.selected {
-  background: var(--amber-glow);
-  border-color: var(--amber);
-  color: var(--amber);
-}
-
-/* ── SETUP SCREEN ──────────────────────────────────────── */
-.setup-screen {
-  position: fixed;
-  inset: 0;
-  background: var(--bg0);
-  z-index: 200;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 32px 24px;
-  padding-top: calc(32px + env(safe-area-inset-top, 0px));
-}
-
-.setup-logo {
-  font-size: 42px;
-  font-weight: 800;
-  letter-spacing: -1px;
-  margin-bottom: 6px;
-}
-
-.setup-logo span { color: var(--amber); }
-
-.setup-tagline {
-  font-size: 14px;
-  color: var(--text1);
-  margin-bottom: 40px;
-  text-align: center;
-}
-
-.setup-card {
-  width: 100%;
-  max-width: 380px;
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: var(--radius);
-  padding: 24px;
-}
-
-.setup-step-title {
-  font-size: 18px;
-  font-weight: 700;
-  margin-bottom: 6px;
-}
-
-.setup-step-sub {
-  font-size: 13px;
-  color: var(--text1);
-  margin-bottom: 20px;
-  line-height: 1.5;
-}
-
-.setup-hint {
-  font-size: 11px;
-  color: var(--text2);
-  margin-top: 10px;
-  line-height: 1.5;
-  font-family: var(--font-mono);
-}
-
-.btn-full {
-  width: 100%;
-  height: 52px;
-  border-radius: var(--radius-sm);
-  border: none;
-  cursor: pointer;
-  font-family: var(--font-display);
-  font-size: 15px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: all 0.15s;
-  margin-top: 16px;
-}
-
-.btn-full:active { transform: scale(0.98); }
-
-.btn-full.primary {
-  background: var(--amber);
-  color: var(--bg0);
-}
-
-.btn-full:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-/* Step indicators */
-.setup-steps {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 28px;
-}
-
-.setup-step-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--bg4);
-  transition: all 0.2s;
-}
-
-.setup-step-dot.active {
-  background: var(--amber);
-  width: 18px;
-  border-radius: 3px;
-}
-
-/* SNR result display */
-.snr-result-big {
-  text-align: center;
-  padding: 16px 0;
-}
-
-.snr-result-num {
-  font-size: 48px;
-  font-weight: 800;
-  font-family: var(--font-mono);
-  line-height: 1;
-}
-
-.snr-result-class {
-  font-size: 14px;
-  font-weight: 700;
-  margin-top: 4px;
-}
-
-.snr-result-note {
-  font-size: 12px;
-  color: var(--text1);
-  margin-top: 8px;
-  line-height: 1.5;
-}
-
-/* ── SNR MODAL ─────────────────────────────────────────── */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.7);
-  z-index: 150;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding: 0 0 var(--safe-bottom);
-  backdrop-filter: blur(4px);
-}
-
-.modal-sheet {
-  background: var(--bg1);
-  border: 1px solid var(--border2);
-  border-radius: var(--radius) var(--radius) 0 0;
-  width: 100%;
-  max-width: 480px;
-  padding: 20px;
-  padding-bottom: calc(20px + var(--safe-bottom));
-}
-
-.modal-handle {
-  width: 36px; height: 4px;
-  background: var(--bg4);
-  border-radius: 2px;
-  margin: 0 auto 20px;
-}
-
-.modal-title {
-  font-size: 18px;
-  font-weight: 700;
-  margin-bottom: 16px;
-}
-
-/* ── TOASTS ────────────────────────────────────────────── */
-.toast-container {
-  position: fixed;
-  top: calc(16px + env(safe-area-inset-top, 0px));
-  left: 16px; right: 16px;
-  z-index: 300;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  pointer-events: none;
-}
-
-.toast {
-  background: var(--bg3);
-  border: 1px solid var(--border2);
-  border-radius: var(--radius-sm);
-  padding: 12px 14px;
-  font-size: 13px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-  animation: toast-in 0.25s cubic-bezier(0.4,0,0.2,1);
-}
-
-.toast.success { border-color: var(--green-dim); }
-.toast.error   { border-color: var(--red-dim);   }
-.toast.info    { border-color: var(--amber-dim);  }
-
-.toast svg { width: 16px; height: 16px; flex-shrink: 0; }
-
-@keyframes toast-in {
-  from { opacity: 0; transform: translateY(-8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* ── CONNECTIVITY BANNER ───────────────────────────────── */
-.offline-banner {
-  background: var(--red-glow);
-  border-bottom: 1px solid var(--red-dim);
-  padding: 8px 16px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--red);
-  text-align: center;
-  letter-spacing: 0.3px;
-}
-
-/* ── EMPTY STATES ──────────────────────────────────────── */
-.empty-state {
-  text-align: center;
-  padding: 60px 20px;
-  color: var(--text2);
-}
-
-.empty-state svg {
-  width: 48px; height: 48px;
-  margin: 0 auto 16px;
-  opacity: 0.3;
-}
-
-.empty-state h3 {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text1);
-  margin-bottom: 6px;
-}
-
-.empty-state p {
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-/* ── SPINNER ───────────────────────────────────────────── */
-.spinner {
-  width: 18px; height: 18px;
-  border: 2px solid rgba(255,255,255,0.2);
-  border-top-color: currentColor;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-  flex-shrink: 0;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
+.s-vault span{color:var(--lime);}
 
-/* ── INGEST HINT ───────────────────────────────────────── */
-.ingest-hint {
-  font-size: 11px;
-  color: var(--text2);
-  text-align: center;
-  margin-top: 6px;
-  line-height: 1.4;
+/* Countdown bar */
+.cdown-wrap{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-top:10px;
 }
-
-/* ── SAVE TICK ─────────────────────────────────────────── */
-.save-tick {
-  color: var(--green);
-  font-size: 12px;
-  font-weight: 700;
-  text-align: center;
-  margin-top: 6px;
-  height: 18px;
-  transition: opacity 0.3s;
-}
-
-/* ── UPTIME / CONNECTION ───────────────────────────────── */
-.connection-status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--text2);
-  font-family: var(--font-mono);
+.cdown-bar{
+  flex:1;height:2px;
+  background:var(--ink3);
+  border-radius:1px;
+  overflow:hidden;
 }
-
-.conn-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--green);
+.cdown-fill{
+  height:100%;
+  background:var(--red);
+  border-radius:1px;
+  transition:width 1s linear;
 }
-
-.conn-dot.offline { background: var(--red); }
-
-/* ── UTILITY ───────────────────────────────────────────── */
-[x-cloak] { display: none !important; }
-
-.divider {
-  height: 1px;
-  background: var(--border);
-  margin: 12px 0;
+.cdown-val{
+  font-family:var(--font-m);
+  font-size:11px;
+  color:var(--t1);
+  flex-shrink:0;
+}
+
+/* ── HERO RECORD BUTTON ─────────────────────────────────────── */
+.hero-circle-wrap{
+  display:flex;
+  justify-content:center;
+  padding:8px 0 16px;
+  position:relative;
+}
+
+.hero-circle{
+  width:180px;height:180px;
+  border-radius:50%;
+  background:var(--ink1);
+  border:2px solid var(--ink3);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  gap:8px;
+  position:relative;
+  transition:all .2s;
+  overflow:visible;
+}
+
+.hero-circle:active{transform:scale(.94);}
+
+/* Idle glow ring */
+.hero-circle::before{
+  content:'';
+  position:absolute;
+  inset:-4px;
+  border-radius:50%;
+  border:1px solid rgba(204,255,0,.08);
+  animation:idle-breathe 4s ease-in-out infinite;
+}
+
+@keyframes idle-breathe{
+  0%,100%{opacity:.3;transform:scale(1);}
+  50%{opacity:1;transform:scale(1.04);}
+}
+
+/* Active recording state */
+.hero-circle.recording{
+  background:var(--void);
+  border-color:var(--lime);
+  box-shadow:
+    0 0 0  4px rgba(204,255,0,.08),
+    0 0 0 12px rgba(204,255,0,.04),
+    0 0 0 24px rgba(204,255,0,.02);
+  animation:record-pulse 1.2s ease-in-out infinite;
+}
+
+.hero-circle.recording::before{
+  border-color:rgba(204,255,0,.3);
+  animation:record-ring 1.2s ease-out infinite;
+}
+
+@keyframes record-pulse{
+  0%,100%{box-shadow:
+    0 0 0  4px rgba(204,255,0,.08),
+    0 0 0 12px rgba(204,255,0,.04),
+    0 0 0 24px rgba(204,255,0,.02);}
+  50%{box-shadow:
+    0 0 0  6px rgba(204,255,0,.15),
+    0 0 0 20px rgba(204,255,0,.07),
+    0 0 0 36px rgba(204,255,0,.03);}
+}
+
+@keyframes record-ring{
+  0%{transform:scale(1);opacity:.6;}
+  100%{transform:scale(1.3);opacity:0;}
+}
+
+.hero-icon{
+  width:48px;height:48px;
+  flex-shrink:0;
+  transition:color .2s;
+}
+
+.hero-circle:not(.recording) .hero-icon{color:var(--t1);}
+.hero-circle.recording .hero-icon{color:var(--lime);}
+
+.hero-label{
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  transition:color .2s;
+}
+
+.hero-circle:not(.recording) .hero-label{color:var(--t2);}
+.hero-circle.recording .hero-label{color:var(--lime);}
+
+.hero-timer{
+  font-family:var(--font-m);
+  font-size:11px;
+  color:var(--lime);
+  min-height:16px;
+  text-align:center;
+}
+
+/* ── CONTROL BUTTONS ────────────────────────────────────────── */
+.ctrl-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-bottom:12px;
+}
+
+.ctrl-tile{
+  height:72px;
+  border-radius:var(--r);
+  border:1px solid var(--ink3);
+  background:var(--ink0);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  cursor:pointer;
+  transition:all .15s;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:var(--t1);
+}
+
+.ctrl-tile:active{background:var(--ink2);transform:scale(.97);}
+.ctrl-tile svg{width:20px;height:20px;}
+
+.ctrl-tile.muted-state{
+  border-color:rgba(255,59,48,.25);
+  color:var(--red);
+  background:var(--red-dim);
+}
+
+/* False Positive — full width, only when muted */
+.fp-tile{
+  grid-column:1/-1;
+  height:64px;
+  border-radius:var(--r);
+  border:1px solid rgba(255,159,10,.2);
+  background:rgba(255,159,10,.06);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  cursor:pointer;
+  transition:all .15s;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:var(--amber);
+}
+.fp-tile:active{background:rgba(255,159,10,.12);transform:scale(.98);}
+.fp-tile svg{width:18px;height:18px;}
+
+/* ── MIC TOGGLE ROW ─────────────────────────────────────────── */
+.mic-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:var(--ink0);
+  border:1px solid var(--ink2);
+  border-radius:var(--r);
+  padding:13px 16px;
+  margin-bottom:10px;
+}
+
+.mic-label{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-size:13px;
+  font-weight:700;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  color:var(--t1);
+}
+.mic-label svg{width:16px;height:16px;}
+
+.toggle{
+  width:48px;height:26px;
+  background:var(--ink3);
+  border-radius:13px;
+  cursor:pointer;
+  position:relative;
+  transition:background .2s;
+  flex-shrink:0;
+}
+.toggle.on{background:var(--lime);}
+.toggle::after{
+  content:'';
+  position:absolute;
+  width:20px;height:20px;
+  border-radius:50%;
+  background:var(--void);
+  top:3px;left:3px;
+  transition:transform .2s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 1px 3px rgba(0,0,0,.5);
+}
+.toggle.on::after{transform:translateX(22px);}
+
+/* ── SNR STRIP ──────────────────────────────────────────────── */
+.snr-strip{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  background:var(--ink0);
+  border:1px solid var(--ink2);
+  border-radius:var(--r-sm);
+  padding:9px 14px;
+  cursor:pointer;
+  margin-bottom:14px;
+  transition:background .15s;
+}
+.snr-strip:active{background:var(--ink1);}
+
+.snr-lbl{
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.15em;
+  text-transform:uppercase;
+  color:var(--t2);
+  flex-shrink:0;
+}
+
+.snr-bar-bg{
+  flex:1;height:3px;
+  background:var(--ink3);
+  border-radius:2px;
+  overflow:hidden;
+}
+
+.snr-bar-fill{
+  height:100%;
+  border-radius:2px;
+  transition:width .6s ease;
+}
+
+.snr-val{
+  font-family:var(--font-m);
+  font-size:11px;
+  font-weight:700;
+  flex-shrink:0;
+  min-width:50px;
+  text-align:right;
+}
+
+/* SNR colors */
+.snr-pass .snr-bar-fill,.snr-pass .snr-val{background:var(--lime);color:var(--lime);}
+.snr-warn .snr-bar-fill,.snr-warn .snr-val{background:var(--amber);color:var(--amber);}
+.snr-fail .snr-bar-fill,.snr-fail .snr-val{background:var(--red);color:var(--red);}
+
+/* ── BENTO GRID (Stats) ─────────────────────────────────────── */
+.bento{
+  display:grid;
+  gap:10px;
+  margin:14px 0;
+}
+
+/* Hero bento tile — full width */
+.bento-hero{
+  background:var(--ink0);
+  border:1px solid rgba(204,255,0,.15);
+  border-radius:var(--r-lg);
+  padding:24px 20px 20px;
+  position:relative;
+  overflow:hidden;
+}
+
+.bento-hero::before{
+  content:'';
+  position:absolute;
+  top:-60px;right:-60px;
+  width:180px;height:180px;
+  border-radius:50%;
+  background:radial-gradient(circle, rgba(204,255,0,.07), transparent 70%);
+  pointer-events:none;
+}
+
+.bento-eyebrow{
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  color:var(--t2);
+  margin-bottom:6px;
+}
+
+.bento-num{
+  font-size:72px;
+  font-weight:900;
+  line-height:.9;
+  letter-spacing:-.03em;
+  color:var(--lime);
+  text-shadow:0 0 40px rgba(204,255,0,.3);
+}
+
+.bento-unit{
+  font-size:16px;
+  font-weight:700;
+  color:var(--t1);
+  margin-top:6px;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+}
+
+.bento-sub{
+  font-family:var(--font-m);
+  font-size:10px;
+  color:var(--t2);
+  margin-top:8px;
+}
+
+/* 3-column row */
+.bento-row{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:10px;
+}
+
+.bento-tile{
+  background:var(--ink0);
+  border:1px solid var(--ink2);
+  border-radius:var(--r);
+  padding:14px 10px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+  cursor:pointer;
+  transition:border-color .2s;
+}
+.bento-tile:active{border-color:var(--ink3);}
+
+.bento-tile-num{
+  font-size:28px;
+  font-weight:900;
+  letter-spacing:-.02em;
+  line-height:1;
+  font-variant-numeric:tabular-nums;
+}
+
+.bento-tile-lbl{
+  font-size:8px;
+  font-weight:800;
+  letter-spacing:.15em;
+  text-transform:uppercase;
+  color:var(--t2);
+}
+
+/* ── SECTION TITLES ─────────────────────────────────────────── */
+.sec-title{
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  color:var(--t2);
+  margin:16px 0 8px;
+  padding-bottom:6px;
+  border-bottom:1px solid var(--ink2);
+}
+
+/* ── TOP ADS BARS ───────────────────────────────────────────── */
+.top-ads-card{
+  background:var(--ink0);
+  border:1px solid var(--ink2);
+  border-radius:var(--r);
+  overflow:hidden;
+}
+
+.top-ad-row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:12px 14px;
+  border-bottom:1px solid var(--ink2);
+}
+.top-ad-row:last-child{border-bottom:none;}
+
+.top-ad-rank{
+  font-family:var(--font-m);
+  font-size:10px;
+  color:var(--t2);
+  width:14px;
+  flex-shrink:0;
+}
+
+.top-ad-name{
+  flex:1;
+  min-width:0;
+  font-size:13px;
+  font-weight:700;
+  letter-spacing:.02em;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.top-ad-bar-wrap{width:70px;flex-shrink:0;}
+
+.top-ad-bar-bg{
+  height:3px;
+  background:var(--ink3);
+  border-radius:2px;
+  overflow:hidden;
+}
+
+.top-ad-bar-fill{
+  height:100%;
+  background:var(--lime);
+  border-radius:2px;
+  box-shadow:0 0 6px rgba(204,255,0,.4);
+  transition:width .8s cubic-bezier(.4,0,.2,1);
+}
+
+.top-ad-count{
+  font-family:var(--font-m);
+  font-size:10px;
+  color:var(--lime);
+  text-align:right;
+  margin-top:3px;
+}
+
+/* ── MUTE LOG ───────────────────────────────────────────────── */
+.log-card{
+  background:var(--ink0);
+  border:1px solid var(--ink2);
+  border-radius:var(--r);
+  overflow:hidden;
+}
+
+.log-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:11px 14px;
+  border-bottom:1px solid var(--ink2);
+}
+.log-row:last-child{border-bottom:none;}
+.log-row.fp-row{background:rgba(255,59,48,.04);}
+
+.log-ad{flex:1;min-width:0;}
+
+.log-ad-name{
+  font-size:13px;
+  font-weight:700;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.log-meta{
+  font-family:var(--font-m);
+  font-size:9px;
+  color:var(--t2);
+  margin-top:2px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.exile-badge{
+  font-size:8px;
+  font-weight:700;
+  letter-spacing:.05em;
+  color:var(--red);
+  background:var(--red-dim);
+  border:1px solid rgba(255,59,48,.2);
+  padding:2px 5px;
+  border-radius:3px;
+}
+
+.log-right{text-align:right;flex-shrink:0;}
+
+.log-dur{
+  font-family:var(--font-m);
+  font-size:12px;
+  color:var(--t0);
+}
+
+.log-time{
+  font-family:var(--font-m);
+  font-size:9px;
+  color:var(--t2);
+  margin-top:2px;
+}
+
+.load-more{
+  width:100%;
+  height:44px;
+  background:var(--void);
+  border:1px solid var(--ink2);
+  border-radius:var(--r-sm);
+  color:var(--t1);
+  font-family:var(--font-d);
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  cursor:pointer;
+  margin-top:10px;
+  transition:background .15s;
+}
+.load-more:active{background:var(--ink1);}
+
+/* ── SNR HISTORY ────────────────────────────────────────────── */
+.snr-hist-card{
+  background:var(--ink0);
+  border:1px solid var(--ink2);
+  border-radius:var(--r);
+  overflow:hidden;
+}
+
+.snr-hist-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 14px;
+  border-bottom:1px solid var(--ink2);
+}
+.snr-hist-row:last-child{border-bottom:none;}
+
+.snr-hist-dot{
+  width:7px;height:7px;
+  border-radius:50%;
+  flex-shrink:0;
+}
+.snr-hist-dot.pass{background:var(--lime);box-shadow:0 0 4px var(--lime);}
+.snr-hist-dot.warn{background:var(--amber);}
+.snr-hist-dot.fail{background:var(--red);}
+
+/* ── RECORDINGS ─────────────────────────────────────────────── */
+.rec-cards-wrap{padding:14px 0;}
+
+.rec-card{
+  background:var(--ink0);
+  border:1px solid var(--ink2);
+  border-radius:var(--r);
+  margin-bottom:10px;
+  overflow:hidden;
+  transition:border-color .2s;
+}
+.rec-card.expanded{border-color:var(--ink3);}
+
+.rec-header{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:13px;
+  cursor:pointer;
+}
+.rec-header:active{background:var(--ink1);}
+
+.rec-waveform{
+  width:68px;height:34px;
+  border-radius:6px;
+  background:var(--ink2);
+  flex-shrink:0;
+  overflow:hidden;
+}
+
+.rec-info{flex:1;min-width:0;}
+
+.rec-pills{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin-bottom:4px;
+}
+
+.pill{
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  padding:3px 7px;
+  border-radius:20px;
+}
+
+.pill-pending{background:var(--ink3);color:var(--t1);}
+.pill-ingested{
+  background:rgba(204,255,0,.1);
+  color:var(--lime);
+  border:1px solid rgba(204,255,0,.2);
+}
+.pill-rejected{background:var(--red-dim);color:var(--red);}
+
+.rec-meta{
+  font-family:var(--font-m);
+  font-size:10px;
+  color:var(--t2);
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.rec-dur{
+  background:var(--ink2);
+  padding:1px 5px;
+  border-radius:3px;
+}
+
+.rec-body{
+  padding:0 13px 13px;
+  border-top:1px solid var(--ink2);
+}
+
+audio{
+  width:100%;
+  margin:12px 0;
+  accent-color:var(--lime);
+}
+
+/* Form elements */
+.form-group{margin-bottom:10px;}
+
+.form-label{
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.15em;
+  text-transform:uppercase;
+  color:var(--t2);
+  margin-bottom:5px;
+  display:block;
+}
+
+.form-select,.form-input,.form-textarea{
+  width:100%;
+  background:var(--ink1);
+  border:1px solid var(--ink3);
+  border-radius:var(--r-sm);
+  color:var(--t0);
+  font-family:var(--font-d);
+  font-size:14px;
+  font-weight:500;
+  padding:10px 12px;
+  -webkit-appearance:none;
+  appearance:none;
+  outline:none;
+  transition:border-color .2s;
+}
+
+.form-select:focus,.form-input:focus,.form-textarea:focus{
+  border-color:rgba(204,255,0,.3);
+}
+
+.form-select{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23444'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 10px center;
+  background-size:14px;
+  padding-right:30px;
+}
+
+.form-textarea{resize:none;height:64px;}
+
+/* Action buttons */
+.btn-row{display:flex;gap:8px;margin-top:12px;}
+
+.btn{
+  flex:1;
+  height:44px;
+  border-radius:var(--r-sm);
+  border:none;
+  cursor:pointer;
+  font-family:var(--font-d);
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  transition:all .15s;
+}
+.btn:active{transform:scale(.96);}
+.btn:disabled{opacity:.35;cursor:not-allowed;}
+.btn svg{width:15px;height:15px;}
+
+.btn-lime{
+  background:var(--lime);
+  color:var(--void);
+}
+
+.btn-ghost{
+  background:var(--ink2);
+  border:1px solid var(--ink3);
+  color:var(--t0);
+}
+
+.btn-danger{
+  background:var(--red-dim);
+  border:1px solid rgba(255,59,48,.2);
+  color:var(--red);
+}
+
+/* 2-step delete confirm */
+.delete-confirm{
+  background:var(--red-dim);
+  border:1px solid rgba(255,59,48,.2);
+  border-radius:var(--r-sm);
+  padding:12px;
+  margin-top:10px;
+}
+
+.delete-confirm p{
+  font-size:11px;
+  color:var(--t1);
+  margin-bottom:10px;
+  line-height:1.5;
+  font-weight:500;
+}
+
+.divider{height:1px;background:var(--ink2);margin:12px 0;}
+
+.ingest-hint{
+  font-size:10px;
+  color:var(--t2);
+  text-align:center;
+  margin-top:5px;
+  line-height:1.4;
+  font-family:var(--font-m);
+}
+
+.save-confirm{
+  font-family:var(--font-m);
+  font-size:10px;
+  color:var(--lime);
+  text-align:center;
+  margin-top:5px;
+  height:16px;
+  transition:opacity .3s;
+}
+
+/* ── SETTINGS PANEL ─────────────────────────────────────────── */
+.settings-panel{
+  position:fixed;inset:0;
+  background:var(--void);
+  z-index:100;
+  overflow-y:auto;
+  transform:translateX(100%);
+  transition:transform .3s cubic-bezier(.4,0,.2,1);
+}
+.settings-panel.open{transform:translateX(0);}
+
+.settings-hdr{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:14px;
+  padding-top:calc(14px + var(--safe-t));
+  border-bottom:1px solid var(--ink2);
+  position:sticky;top:0;
+  background:var(--void);
+  z-index:1;
+}
+
+.settings-title{
+  font-size:20px;
+  font-weight:900;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+}
+
+.settings-body{
+  padding:16px 14px;
+  padding-bottom:calc(32px + var(--safe-b));
+}
+
+.settings-sec{margin-bottom:28px;}
+
+.settings-sec-title{
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  color:var(--lime);
+  margin-bottom:10px;
+  padding-bottom:6px;
+  border-bottom:1px solid rgba(204,255,0,.1);
+}
+
+.settings-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:12px 0;
+  border-bottom:1px solid var(--ink2);
+}
+.settings-row:last-child{border-bottom:none;}
+
+.settings-row-label{
+  font-size:14px;
+  font-weight:700;
+  letter-spacing:.02em;
+}
+.settings-row-sub{
+  font-family:var(--font-m);
+  font-size:10px;
+  color:var(--t2);
+  margin-top:2px;
+}
+
+.radio-group{
+  display:flex;
+  gap:8px;
+  margin-top:8px;
+}
+
+.radio-opt{
+  flex:1;
+  height:38px;
+  border-radius:var(--r-sm);
+  border:1px solid var(--ink3);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:all .2s;
+  color:var(--t1);
+}
+.radio-opt.selected{
+  background:var(--lime-dim);
+  border-color:var(--lime);
+  color:var(--lime);
+}
+
+.slider-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-top:8px;
+}
+input[type=range]{
+  flex:1;
+  accent-color:var(--lime);
+  cursor:pointer;
+}
+.slider-val{
+  font-family:var(--font-m);
+  font-size:12px;
+  color:var(--lime);
+  min-width:42px;
+  text-align:right;
+}
+
+.danger-btn{
+  width:100%;
+  height:46px;
+  background:var(--red-dim);
+  border:1px solid rgba(255,59,48,.15);
+  border-radius:var(--r-sm);
+  color:var(--red);
+  font-family:var(--font-d);
+  font-size:13px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  cursor:pointer;
+  margin-bottom:10px;
+  transition:background .15s;
+}
+.danger-btn:active{background:rgba(255,59,48,.15);}
+
+/* ── SETUP SCREEN ───────────────────────────────────────────── */
+.setup-screen{
+  position:fixed;inset:0;
+  background:var(--void);
+  z-index:200;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:32px 20px;
+  padding-top:calc(32px + var(--safe-t));
+}
+
+.setup-logo{
+  font-size:52px;
+  font-weight:900;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  margin-bottom:6px;
+}
+.setup-logo em{font-style:normal;color:var(--lime);}
+
+.setup-tag{
+  font-family:var(--font-m);
+  font-size:11px;
+  color:var(--t2);
+  margin-bottom:40px;
+  text-align:center;
+}
+
+.setup-card{
+  width:100%;
+  max-width:380px;
+  background:var(--ink0);
+  border:1px solid var(--ink2);
+  border-radius:var(--r-lg);
+  padding:24px;
+}
+
+.setup-steps{
+  display:flex;
+  gap:6px;
+  margin-bottom:24px;
+}
+.setup-dot{
+  height:3px;
+  border-radius:2px;
+  background:var(--ink3);
+  flex:1;
+  transition:all .3s;
+}
+.setup-dot.active{background:var(--lime);}
+
+.setup-step-title{
+  font-size:20px;
+  font-weight:800;
+  letter-spacing:.02em;
+  margin-bottom:6px;
+}
+
+.setup-step-sub{
+  font-size:13px;
+  font-weight:500;
+  color:var(--t1);
+  margin-bottom:20px;
+  line-height:1.5;
+}
+
+.setup-hint{
+  font-family:var(--font-m);
+  font-size:10px;
+  color:var(--t2);
+  margin-top:8px;
+  line-height:1.5;
+}
+
+.btn-full{
+  width:100%;
+  height:52px;
+  border-radius:var(--r-sm);
+  border:none;
+  cursor:pointer;
+  font-family:var(--font-d);
+  font-size:14px;
+  font-weight:800;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  transition:all .15s;
+  margin-top:16px;
+}
+.btn-full:active{transform:scale(.98);}
+.btn-full:disabled{opacity:.35;cursor:not-allowed;}
+
+.btn-full.primary{background:var(--lime);color:var(--void);}
+.btn-full.secondary{background:var(--ink2);border:1px solid var(--ink3);color:var(--t0);}
+
+/* SNR result */
+.snr-big{
+  text-align:center;
+  padding:16px 0;
+}
+.snr-big-num{
+  font-size:56px;
+  font-weight:900;
+  font-family:var(--font-m);
+  line-height:1;
+}
+.snr-big-cls{
+  font-size:13px;
+  font-weight:700;
+  margin-top:4px;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+}
+.snr-big-note{
+  font-size:12px;
+  color:var(--t1);
+  margin-top:8px;
+  line-height:1.5;
+}
+
+/* ── SNR MODAL ──────────────────────────────────────────────── */
+.modal-overlay{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.8);
+  z-index:150;
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  backdrop-filter:blur(4px);
+}
+
+.modal-sheet{
+  background:var(--ink0);
+  border:1px solid var(--ink2);
+  border-radius:var(--r-lg) var(--r-lg) 0 0;
+  width:100%;
+  max-width:480px;
+  padding:20px;
+  padding-bottom:calc(20px + var(--safe-b));
+}
+
+.modal-handle{
+  width:32px;height:3px;
+  background:var(--ink3);
+  border-radius:2px;
+  margin:0 auto 20px;
+}
+
+.modal-title{
+  font-size:20px;
+  font-weight:800;
+  letter-spacing:.03em;
+  text-transform:uppercase;
+  margin-bottom:16px;
+}
+
+/* ── TOASTS ─────────────────────────────────────────────────── */
+.toast-zone{
+  position:fixed;
+  top:calc(14px + var(--safe-t));
+  left:14px;right:14px;
+  z-index:300;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  pointer-events:none;
+}
+
+.toast{
+  background:var(--ink1);
+  border:1px solid var(--ink3);
+  border-radius:var(--r-sm);
+  padding:11px 14px;
+  font-size:13px;
+  font-weight:600;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  box-shadow:0 4px 24px rgba(0,0,0,.6);
+  animation:toast-in .2s ease;
+}
+.toast.success{border-color:rgba(204,255,0,.2);}
+.toast.error  {border-color:rgba(255,59,48,.2);}
+.toast.info   {border-color:rgba(255,159,10,.2);}
+.toast svg{width:15px;height:15px;flex-shrink:0;}
+
+@keyframes toast-in{
+  from{opacity:0;transform:translateY(-6px);}
+  to  {opacity:1;transform:translateY(0);}
+}
+
+/* ── OFFLINE BANNER ─────────────────────────────────────────── */
+.offline-bar{
+  background:var(--red-dim);
+  border-bottom:1px solid rgba(255,59,48,.2);
+  padding:8px 14px;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.05em;
+  color:var(--red);
+  text-align:center;
+  text-transform:uppercase;
+}
+
+/* ── EMPTY STATE ────────────────────────────────────────────── */
+.empty{
+  text-align:center;
+  padding:60px 20px;
+  color:var(--t2);
+}
+.empty svg{width:44px;height:44px;margin:0 auto 14px;opacity:.2;}
+.empty h3{font-size:16px;font-weight:800;color:var(--t1);margin-bottom:6px;letter-spacing:.03em;text-transform:uppercase;}
+.empty p{font-size:13px;line-height:1.5;font-weight:500;}
+
+/* ── SPINNER ────────────────────────────────────────────────── */
+.spin{
+  width:16px;height:16px;
+  border:2px solid rgba(255,255,255,.15);
+  border-top-color:currentColor;
+  border-radius:50%;
+  animation:rotate .5s linear infinite;
+  flex-shrink:0;
+}
+@keyframes rotate{to{transform:rotate(360deg);}}
+
+/* ── EXILE BADGE ────────────────────────────────────────────── */
+.vault-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  padding:2px 7px;
+  border-radius:20px;
+  border:1px solid;
+}
+.vault-active{
+  color:var(--lime);
+  border-color:rgba(204,255,0,.2);
+  background:rgba(204,255,0,.06);
+}
+.vault-exiled{
+  color:var(--red);
+  border-color:rgba(255,59,48,.2);
+  background:var(--red-dim);
 }
-
-.mt-8  { margin-top: 8px; }
-.mt-12 { margin-top: 12px; }
-.mt-16 { margin-top: 16px; }
-
-.text-amber { color: var(--amber); }
-.text-green { color: var(--green); }
-.text-red   { color: var(--red);   }
-.text-dim   { color: var(--text2); }
 
-.mono { font-family: var(--font-mono); }
 </style>
 </head>
 <body x-data="admute()" x-init="init()" x-cloak>
 
-<!-- ── SETUP SCREEN ──────────────────────────────────────────────── -->
+<!-- ── SETUP ──────────────────────────────────────────────────── -->
 <div class="setup-screen" x-show="!isSetup" x-transition.opacity>
-  <div class="setup-logo">Ad<span>Mute</span></div>
-  <p class="setup-tagline">Peace back to your living room.</p>
-
-  <div class="setup-steps">
-    <div class="setup-step-dot" :class="setupStep >= 1 ? 'active' : ''"></div>
-    <div class="setup-step-dot" :class="setupStep >= 2 ? 'active' : ''"></div>
-    <div class="setup-step-dot" :class="setupStep >= 3 ? 'active' : ''"></div>
-  </div>
+  <div class="setup-logo">Ad<em>Mute</em></div>
+  <p class="setup-tag">signal intelligence for your living room</p>
 
   <div class="setup-card">
+    <div class="setup-steps">
+      <div class="setup-dot" :class="setupStep >= 1 ? 'active' : ''"></div>
+      <div class="setup-dot" :class="setupStep >= 2 ? 'active' : ''"></div>
+      <div class="setup-dot" :class="setupStep >= 3 ? 'active' : ''"></div>
+    </div>
 
-    <!-- Step 1: Pi Address -->
+    <!-- Step 1 -->
     <div x-show="setupStep === 1">
       <div class="setup-step-title">Find your Pi</div>
-      <p class="setup-step-sub">Enter the IP address of your Raspberry Pi on the local network.</p>
+      <p class="setup-step-sub">Enter the IP address of your Raspberry Pi.</p>
       <div class="form-group">
         <label class="form-label">Pi IP Address</label>
         <input class="form-input" type="text" placeholder="192.168.1.45"
                x-model="setupAddress" @keydown.enter="testConnection()">
       </div>
-      <p class="setup-hint">Find it by running <code>hostname -I</code> on your Pi.</p>
+      <p class="setup-hint">Run <code>hostname -I</code> on your Pi to find it.</p>
       <button class="btn-full primary" :disabled="!setupAddress || setupTesting"
               @click="testConnection()">
-        <span x-show="setupTesting"><div class="spinner"></div></span>
+        <span x-show="setupTesting"><div class="spin"></div></span>
         <span x-text="setupTesting ? 'Connecting...' : 'Connect'"></span>
       </button>
     </div>
 
-    <!-- Step 2: Secret -->
+    <!-- Step 2 -->
     <div x-show="setupStep === 2">
       <div class="setup-step-title">Enter your secret</div>
-      <p class="setup-step-sub">Paste the API secret shown when you first ran the daemon.</p>
+      <p class="setup-step-sub">Paste the API secret printed when daemon.py first started.</p>
       <div class="form-group">
         <label class="form-label">API Secret</label>
-        <input class="form-input" type="password" placeholder="Paste secret here"
+        <input class="form-input" type="password" placeholder="Paste 64-char secret"
                x-model="setupSecret" @keydown.enter="saveSecret()">
       </div>
-      <p class="setup-hint">The secret was printed to the terminal when daemon.py first started.</p>
-      <button class="btn-full primary" :disabled="!setupSecret"
-              @click="saveSecret()">Confirm Secret</button>
+      <button class="btn-full primary" :disabled="!setupSecret" @click="saveSecret()">
+        Confirm Secret
+      </button>
     </div>
 
-    <!-- Step 3: SNR Test -->
+    <!-- Step 3 -->
     <div x-show="setupStep === 3">
-      <div class="setup-step-title">Check mic placement</div>
-      <p class="setup-step-sub">Let's make sure your microphone can hear the TV clearly.</p>
+      <div class="setup-step-title">Mic placement</div>
+      <p class="setup-step-sub">Test signal quality with the TV on at normal volume.</p>
 
-      <div x-show="!snrTestResult" style="text-align:center; padding: 20px 0; color: var(--text2);">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:40px;height:40px;margin:0 auto 10px;display:block;opacity:0.4"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
-        <p style="font-size:13px;">Tap the button to test your mic placement.</p>
+      <div x-show="!snrTestResult && !snrTesting"
+           style="text-align:center;padding:20px 0;color:var(--t2);">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:36px;height:36px;margin:0 auto 8px;display:block;opacity:.3">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+        </svg>
+        <p style="font-size:13px;font-weight:500;">TV must be playing audio during the test.</p>
       </div>
 
-      <div class="snr-result-big" x-show="snrTestResult">
-        <div class="snr-result-num"
-             :class="snrTestResult?.classification === 'pass' ? 'text-green' : snrTestResult?.classification === 'warn' ? 'text-amber' : 'text-red'"
+      <div class="snr-big" x-show="snrTestResult">
+        <div class="snr-big-num"
+             :style="`color:${snrTestResult?.classification === 'pass' ? 'var(--lime)' : snrTestResult?.classification === 'warn' ? 'var(--amber)' : 'var(--red)'}`"
              x-text="snrTestResult?.snr_db + ' dB'"></div>
-        <div class="snr-result-class"
-             :class="snrTestResult?.classification === 'pass' ? 'text-green' : snrTestResult?.classification === 'warn' ? 'text-amber' : 'text-red'"
+        <div class="snr-big-cls"
+             :style="`color:${snrTestResult?.classification === 'pass' ? 'var(--lime)' : snrTestResult?.classification === 'warn' ? 'var(--amber)' : 'var(--red)'}`"
              x-text="snrTestResult?.classification === 'pass' ? '✓ Excellent' : snrTestResult?.classification === 'warn' ? '⚠ Acceptable' : '✕ Poor'"></div>
-        <p class="snr-result-note" x-text="snrTestResult?.note"></p>
+        <p class="snr-big-note" x-text="snrTestResult?.note"></p>
       </div>
 
       <button class="btn-full primary" :disabled="snrTesting" @click="runSnrTest()">
-        <span x-show="snrTesting"><div class="spinner"></div></span>
-        <span x-text="snrTesting ? 'Testing...' : snrTestResult ? 'Test Again' : 'Run Placement Test'"></span>
+        <span x-show="snrTesting"><div class="spin"></div></span>
+        <span x-text="snrTesting ? 'Sampling 3s...' : snrTestResult ? 'Test Again' : 'Run Placement Test'"></span>
       </button>
-
-      <button class="btn-full" style="background:var(--bg3);border:1px solid var(--border);color:var(--text0);"
-              x-show="snrTestResult || true" @click="finishSetup()">
+      <button class="btn-full secondary" @click="finishSetup()">
         <span x-text="snrTestResult ? 'Go to Control →' : 'Skip for now'"></span>
       </button>
     </div>
   </div>
 </div>
 
-<!-- ── MAIN APP ───────────────────────────────────────────────────── -->
+<!-- ── MAIN APP ────────────────────────────────────────────────── -->
 <div id="app" x-show="isSetup" x-transition.opacity>
 
-  <!-- Offline banner -->
-  <div class="offline-banner" x-show="!isOnline">
-    ⚠ Cannot reach AdMute — check Wi-Fi connection
+  <div class="offline-bar" x-show="!isOnline">
+    ⚠ Cannot reach AdMute — check Wi-Fi
   </div>
 
   <!-- Header -->
-  <div class="app-header">
-    <div class="logo">Ad<span>Mute</span></div>
-    <div class="header-right">
-      <div class="connection-status">
-        <div class="conn-dot" :class="!isOnline ? 'offline' : ''"></div>
-        <span x-text="isOnline ? formatUptime(uptime) : 'offline'" class="mono"></span>
+  <div class="hdr">
+    <div class="wordmark">Ad<em>Mute</em></div>
+    <div class="hdr-right">
+      <div class="uptime-pill">
+        <div class="status-led" :class="!isOnline ? 'offline' : ''"></div>
+        <span x-text="isOnline ? formatUptime(uptime) : 'offline'"></span>
       </div>
       <div class="icon-btn" @click="showSettings = true">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1490,184 +1560,159 @@ input[type=range] {
     </div>
   </div>
 
-  <!-- Main scroll area -->
-  <div class="main-scroll">
+  <!-- Scroll area -->
+  <div class="scroll-area">
 
-    <!-- ── VIEW: CONTROL ───────────────────────────────────── -->
-    <div x-show="currentView === 'control'">
+    <!-- ── CONTROL VIEW ──────────────────────────────────────── -->
+    <div x-show="view === 'control'">
 
-      <!-- Status Banner -->
-      <div class="status-banner"
+      <!-- Status hero -->
+      <div class="status-hero"
            :class="!micActive ? 'mic-off' : isMuted ? 'muted' : 'listening'">
-        <div class="status-top">
-          <div class="status-dot"></div>
-          <span class="status-label"
-                x-text="!micActive ? 'MIC OFF' : isMuted ? 'MUTED' : 'LISTENING'"></span>
+        <div class="status-row">
+          <div class="s-dot"></div>
+          <span class="s-label"
+                x-text="!micActive ? 'Mic Off' : isMuted ? 'Muted' : 'Listening'"></span>
         </div>
 
         <div x-show="isMuted">
-          <div class="status-ad-name" x-text="currentAdName || 'Ad detected'"></div>
-          <div class="status-countdown">
-            <span class="mono" x-text="muteCountdown > 0 ? muteCountdown + 's remaining' : 'unmuting...'"></span>
-            <div class="countdown-bar">
-              <div class="countdown-fill" :style="`width: ${countdownPct}%`"></div>
+          <div class="s-ad-name" x-text="currentAdName || 'Ad detected'"></div>
+          <div class="cdown-wrap">
+            <span class="cdown-val mono" x-text="muteCountdown > 0 ? muteCountdown + 's' : '—'"></span>
+            <div class="cdown-bar">
+              <div class="cdown-fill" :style="`width:${countdownPct}%`"></div>
             </div>
           </div>
         </div>
 
         <div x-show="!isMuted && micActive">
-          <div style="font-size:14px; color:var(--text1); margin-top:2px;">
-            Vault: <span class="mono text-amber" x-text="vaultSize"></span> ads
-            <span x-show="vaultSize === 0" style="color:var(--text2);"> — record your first ad below</span>
+          <div class="s-vault">
+            Vault <span x-text="vaultSize"></span> ads
+            <span x-show="vaultSize === 0" style="color:var(--t2)"> — record your first ad below</span>
           </div>
         </div>
 
         <div x-show="!micActive">
-          <div style="font-size:14px; color:var(--text2); margin-top:2px;">
-            Listening paused. Toggle mic to resume.
-          </div>
+          <div class="s-vault" style="color:var(--t2)">Listening paused</div>
         </div>
       </div>
 
-      <!-- Three primary buttons -->
-      <div class="btn-stack">
-
-        <!-- Mute Toggle -->
-        <button class="ctrl-btn btn-mute" :class="isMuted ? 'is-muted' : ''"
-                @click="toggleMute()">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  x-bind:d="isMuted
-                    ? 'M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2'
-                    : 'M15.536 8.464a5 5 0 010 7.072M12 6v12m-3.536-9.536a5 5 0 000 7.072M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z'"/>
-          </svg>
-          <span x-text="isMuted ? 'UNMUTE TV' : 'MUTE TV'"></span>
-        </button>
-
-        <!-- Record -->
-        <button class="ctrl-btn btn-record" :class="isRecording ? 'recording' : ''"
-                :disabled="!micActive"
-                @click="toggleRecord()">
-          <div class="record-rings" x-show="isRecording"></div>
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+      <!-- Hero record circle -->
+      <div class="hero-circle-wrap">
+        <div class="hero-circle" :class="isRecording ? 'recording' : ''"
+             @click="toggleRecord()" :style="!micActive ? 'opacity:.4;pointer-events:none' : ''">
+          <svg class="hero-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                   x-bind:d="isRecording
                     ? 'M21 12a9 9 0 11-18 0 9 9 0 0118 0z M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z'
                     : 'M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z'"/>
           </svg>
-          <span x-text="isRecording ? '■ STOP — ' + formatRecTime(recordingSeconds) : '● RECORD NEW AD'"></span>
-        </button>
+          <span class="hero-label"
+                x-text="isRecording ? 'Stop' : 'Record'"></span>
+          <span class="hero-timer"
+                x-text="isRecording ? formatRecTime(recordingSeconds) : ''"></span>
+        </div>
+      </div>
 
-        <!-- False Positive — only when muted -->
-        <button class="ctrl-btn btn-fp"
-                x-show="isMuted"
-                x-transition
-                @click="falsePositive()">
+      <!-- Mute toggle + False Positive grid -->
+      <div class="ctrl-grid">
+        <div class="ctrl-tile" :class="isMuted ? 'muted-state' : ''" @click="toggleMute()">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                  x-bind:d="isMuted
+                    ? 'M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2'
+                    : 'M15.536 8.464a5 5 0 010 7.072M12 6v12m-3.536-9.536a5 5 0 000 7.072M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z'"/>
+          </svg>
+          <span x-text="isMuted ? 'Unmute' : 'Mute'"></span>
+        </div>
+
+        <div class="ctrl-tile" style="position:relative;"
+             :style="!micActive ? 'opacity:.4' : ''">
+          <div class="mic-label" style="gap:6px;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:18px;height:18px;">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+            </svg>
+            Mic
+          </div>
+          <div class="toggle" :class="micActive ? 'on' : ''" @click="toggleMic()"></div>
+        </div>
+
+        <!-- False Positive — full width, only when muted -->
+        <div class="fp-tile" x-show="isMuted" x-transition @click="falsePositive()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:18px;height:18px;">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
           </svg>
-          <span>FALSE POSITIVE — UNMUTE</span>
-        </button>
-
+          FALSE POSITIVE — EXILE &amp; UNMUTE
+        </div>
       </div>
 
-      <!-- Mic kill switch -->
-      <div class="mic-row">
-        <div class="mic-label">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
-          </svg>
-          Microphone
+      <!-- SNR strip -->
+      <div class="snr-strip"
+           :class="snrClass === 'pass' ? 'snr-pass' : snrClass === 'warn' ? 'snr-warn' : snrClass === 'fail' ? 'snr-fail' : ''"
+           @click="openSnrModal()">
+        <span class="snr-lbl">Signal</span>
+        <div class="snr-bar-bg">
+          <div class="snr-bar-fill" :style="`width:${snrDb ? Math.min(snrDb/60*100,100) : 0}%`"></div>
         </div>
-        <div class="toggle" :class="micActive ? 'on' : ''" @click="toggleMic()"></div>
-      </div>
-
-      <!-- SNR Badge -->
-      <div class="snr-badge" @click="openSnrModal()">
-        <span class="snr-label">Signal</span>
-        <div class="snr-bar-wrap">
-          <div class="snr-bar-fill"
-               :class="snrClass === 'pass' ? 'snr-pass' : snrClass === 'warn' ? 'snr-warn' : 'snr-fail'"
-               :style="`width: ${snrDb ? Math.min(snrDb/60*100, 100) : 0}%; background: currentColor`"></div>
-        </div>
-        <span class="snr-val"
-              :class="snrClass === 'pass' ? 'snr-pass' : snrClass === 'warn' ? 'snr-warn' : 'snr-fail'"
-              x-text="snrDb ? snrDb.toFixed(0) + ' dB' : '—'"></span>
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;color:var(--text2);flex-shrink:0;">
+        <span class="snr-val" x-text="snrDb ? snrDb.toFixed(0) + ' dB' : '—'"></span>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:12px;height:12px;color:var(--t2);flex-shrink:0;">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
         </svg>
       </div>
 
     </div><!-- /control -->
 
-    <!-- ── VIEW: RECORDINGS ────────────────────────────────── -->
-    <div x-show="currentView === 'recordings'">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 12px;">
-        <div style="font-size:18px;font-weight:700;">Recordings</div>
-        <div style="font-size:12px;color:var(--text2);" x-text="recordings.length + ' total'"></div>
+    <!-- ── RECORDINGS VIEW ───────────────────────────────────── -->
+    <div x-show="view === 'recordings'">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:14px 0 12px;">
+        <div style="font-size:20px;font-weight:900;letter-spacing:.03em;text-transform:uppercase;">Recordings</div>
+        <div style="font-family:var(--font-m);font-size:11px;color:var(--t2);" x-text="recordings.length + ' total'"></div>
       </div>
 
-      <!-- Empty state -->
-      <div class="empty-state" x-show="recordings.length === 0">
+      <div class="empty" x-show="recordings.length === 0">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
         </svg>
         <h3>No recordings yet</h3>
-        <p>Go to Control and tap<br><strong>Record New Ad</strong> during a commercial break.</p>
+        <p>Go to Control and tap<br><strong>Record</strong> during a commercial break.</p>
       </div>
 
-      <!-- Recording cards -->
       <template x-for="rec in recordings" :key="rec.id">
-        <div class="rec-card" :class="expandedRecording === rec.id ? 'expanded' : ''">
-
-          <!-- Card header (always visible) -->
+        <div class="rec-card" :class="expandedRec === rec.id ? 'expanded' : ''">
           <div class="rec-header" @click="toggleRec(rec.id)">
-            <canvas class="rec-waveform"
-                    :id="'wv-' + rec.id"
-                    width="144" height="72"
-                    x-init="$nextTick(() => drawWaveform(rec))">
-            </canvas>
+            <canvas class="rec-waveform" :id="'wv-'+rec.id" width="136" height="68"></canvas>
             <div class="rec-info">
-              <div style="display:flex;align-items:center;gap:8px;">
+              <div class="rec-pills">
                 <span :class="'pill pill-' + rec.status"
                       x-text="rec.status === 'pending_review' ? 'Pending' : rec.status === 'ingested' ? 'Ingested' : 'Rejected'"></span>
+                <span class="vault-badge" :class="rec.status === 'ingested' ? 'vault-active' : ''"
+                      x-show="rec.status === 'ingested'">● Active</span>
               </div>
-              <div class="rec-time">
-                <span class="rec-dur" x-text="formatDuration(rec.duration_seconds)"></span>
-                <span x-text="formatRecordedAt(rec.recorded_at)"></span>
+              <div class="rec-meta">
+                <span class="rec-dur" x-text="formatDur(rec.duration_seconds)"></span>
+                <span x-text="relTime(rec.recorded_at)"></span>
               </div>
-              <div style="font-size:11px;color:var(--text2);margin-top:2px;"
+              <div style="font-family:var(--font-m);font-size:9px;color:var(--t2);margin-top:2px;"
                    x-text="rec.streaming_service && rec.streaming_service !== 'Unknown' ? rec.streaming_service : ''"></div>
             </div>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                 style="width:16px;height:16px;color:var(--text2);flex-shrink:0;transition:transform 0.2s;"
-                 :style="expandedRecording === rec.id ? 'transform:rotate(180deg)' : ''">
+                 style="width:14px;height:14px;color:var(--t2);flex-shrink:0;transition:transform .2s;"
+                 :style="expandedRec === rec.id ? 'transform:rotate(180deg)' : ''">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
             </svg>
           </div>
 
-          <!-- Expanded body -->
-          <div class="rec-body" x-show="expandedRecording === rec.id" x-transition>
+          <div class="rec-body" x-show="expandedRec === rec.id" x-transition>
+            <audio controls :src="apiUrl('/api/recordings/'+rec.id+'/audio')"></audio>
 
-            <!-- Audio player -->
-            <audio controls class="rec-audio-player"
-                   :src="apiUrl('/api/recordings/' + rec.id + '/audio')"></audio>
-
-            <!-- Metadata -->
             <div class="form-group">
               <label class="form-label">Streaming Service</label>
               <select class="form-select" x-model="rec.streaming_service">
                 <option value="Unknown">Select...</option>
-                <option>Netflix</option>
-                <option>Disney+</option>
-                <option>Prime Video</option>
-                <option>Sportsnet</option>
-                <option>Apple TV+</option>
-                <option>Crave</option>
-                <option>Crunchyroll</option>
-                <option>YouTube</option>
-                <option>Cable / Broadcast</option>
-                <option>Other</option>
+                <option>Netflix</option><option>Disney+</option>
+                <option>Prime Video</option><option>Apple TV+</option>
+                <option>Crave</option><option>YouTube</option>
+                <option>Cable / Broadcast</option><option>Other</option>
               </select>
             </div>
 
@@ -1675,64 +1720,48 @@ input[type=range] {
               <label class="form-label">Category</label>
               <select class="form-select" x-model="rec.category">
                 <option value="Uncategorized">Select...</option>
-                <option>Cars</option>
-                <option>Gambling/Betting</option>
-                <option>Food & Drink</option>
-                <option>Pharma</option>
-                <option>Finance</option>
-                <option>Retail/Packaged goods</option>
-                <option>Tech/Electronics</option>
-                <option>Entertainment/Media</option>
-                <option>Travel</option>
-                <option>PSA/government</option>
-                <option>Other</option>
+                <option>Auto</option><option>Food & Drink</option>
+                <option>Pharma</option><option>Finance</option>
+                <option>Retail</option><option>Telecom</option><option>Other</option>
               </select>
             </div>
 
             <div class="form-group">
               <label class="form-label">Notes</label>
-              <textarea class="form-input form-textarea" placeholder="Optional notes..."
-                        x-model="rec.notes"></textarea>
+              <textarea class="form-input form-textarea" x-model="rec.notes" placeholder="Optional notes..."></textarea>
             </div>
 
-            <button class="btn-sm btn-secondary" style="width:100%;" @click="saveMetadata(rec)">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:15px;height:15px;">
+            <button class="btn btn-ghost" style="width:100%;" @click="saveMetadata(rec)">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
               </svg>
               Save Metadata
             </button>
-
-            <div class="save-tick" :id="'saved-' + rec.id" style="opacity:0;"></div>
+            <div class="save-confirm" :id="'saved-'+rec.id" style="opacity:0;"></div>
 
             <div class="divider"></div>
 
-            <!-- Ingest button (pending only) -->
             <div x-show="rec.status === 'pending_review'">
-              <button class="btn-sm btn-green" style="width:100%;height:48px;"
+              <button class="btn btn-lime" style="width:100%;height:48px;"
                       :disabled="ingestingId === rec.id"
                       @click="ingestRecording(rec)">
-                <span x-show="ingestingId === rec.id"><div class="spinner"></div></span>
-                <svg x-show="ingestingId !== rec.id" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:18px;height:18px;">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
+                <span x-show="ingestingId === rec.id"><div class="spin"></div></span>
                 <span x-text="ingestingId === rec.id ? 'Fingerprinting...' : 'INGEST NOW'"></span>
               </button>
-              <p class="ingest-hint">Adds this recording to your vault. Detection starts immediately. You can add metadata before or after — it doesn't affect detection.</p>
+              <p class="ingest-hint">Adds fingerprint to vault. Detection starts immediately.</p>
             </div>
 
-            <!-- Ingested indicator -->
             <div x-show="rec.status === 'ingested'"
-                 style="text-align:center;padding:8px 0;font-size:12px;color:var(--green);font-weight:600;">
-              ✓ In vault — actively detecting
+                 style="text-align:center;padding:6px 0;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;"
+                 :style="`color:var(--lime)`">
+              ✓ In vault — detecting
             </div>
 
             <div class="divider"></div>
 
-            <!-- Two-step delete -->
             <div x-show="deleteConfirmId !== rec.id">
-              <button class="btn-sm btn-danger" style="width:100%;"
-                      @click="deleteConfirmId = rec.id">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:15px;height:15px;">
+              <button class="btn btn-danger" style="width:100%;" @click="deleteConfirmId = rec.id">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                 </svg>
                 Delete Recording
@@ -1741,65 +1770,60 @@ input[type=range] {
 
             <div class="delete-confirm" x-show="deleteConfirmId === rec.id" x-transition>
               <p x-text="rec.status === 'ingested'
-                ? 'This will permanently delete the recording, remove the ad from your vault, and purge all its fingerprint hashes. This cannot be undone.'
-                : 'This will permanently delete the recording file. This cannot be undone.'"></p>
+                ? 'Permanently deletes the recording, removes the ad from the vault, and purges all fingerprint hashes.'
+                : 'Permanently deletes the recording file.'"></p>
               <div class="btn-row">
-                <button class="btn-sm btn-secondary" @click="deleteConfirmId = null">Cancel</button>
-                <button class="btn-sm btn-danger" @click="deleteRecording(rec)">
-                  <span x-show="deletingId === rec.id"><div class="spinner"></div></span>
+                <button class="btn btn-ghost" @click="deleteConfirmId = null">Cancel</button>
+                <button class="btn btn-danger" @click="deleteRecording(rec)">
+                  <span x-show="deletingId === rec.id"><div class="spin"></div></span>
                   <span x-text="deletingId === rec.id ? 'Deleting...' : 'Yes, Delete All'"></span>
                 </button>
               </div>
             </div>
-
-          </div><!-- /rec-body -->
-        </div><!-- /rec-card -->
+          </div>
+        </div>
       </template>
-
     </div><!-- /recordings -->
 
-    <!-- ── VIEW: STATS ──────────────────────────────────────── -->
-    <div x-show="currentView === 'stats'">
-      <div style="margin:16px 0 12px;font-size:18px;font-weight:700;">Stats</div>
+    <!-- ── STATS VIEW ────────────────────────────────────────── -->
+    <div x-show="view === 'stats'">
 
-      <!-- Hero card -->
-      <div class="hero-card">
-        <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:8px;">THIS MONTH</div>
-        <div class="hero-num" x-text="stats ? stats.minutes_saved_this_month.toFixed(1) : '—'"></div>
-        <div class="hero-label">minutes saved</div>
-        <div class="hero-sub" x-text="stats ? formatMinutesHuman(stats.minutes_saved_this_month) : ''"></div>
+      <!-- Bento hero -->
+      <div class="bento-hero" style="margin-top:14px;">
+        <div class="bento-eyebrow">This Month</div>
+        <div class="bento-num" x-text="stats ? stats.minutes_saved_this_month.toFixed(1) : '—'"></div>
+        <div class="bento-unit">Minutes Saved</div>
+        <div class="bento-sub" x-text="stats ? formatMinHuman(stats.minutes_saved_this_month) : ''"></div>
       </div>
 
-      <!-- Three metric cards -->
-      <div class="metric-row">
-        <div class="metric-card">
-          <div class="metric-num text-amber" x-text="stats?.mute_events_this_month ?? '—'"></div>
-          <div class="metric-label">Mutes</div>
+      <!-- 3-tile row -->
+      <div class="bento-row" style="margin-top:10px;">
+        <div class="bento-tile">
+          <div class="bento-tile-num" style="color:var(--lime);" x-text="stats?.mute_events_this_month ?? '—'"></div>
+          <div class="bento-tile-lbl">Mutes</div>
         </div>
-        <div class="metric-card">
-          <div class="metric-num text-red" x-text="stats?.false_positives_this_month ?? '—'"></div>
-          <div class="metric-label">False+</div>
+        <div class="bento-tile">
+          <div class="bento-tile-num" style="color:var(--red);" x-text="stats?.false_positives_this_month ?? '—'"></div>
+          <div class="bento-tile-lbl">Exiled</div>
         </div>
-        <div class="metric-card">
-          <div class="metric-num text-green" x-text="stats?.vault_size ?? '—'"></div>
-          <div class="metric-label">In Vault</div>
+        <div class="bento-tile">
+          <div class="bento-tile-num" style="color:var(--t0);" x-text="stats?.vault_size ?? '—'"></div>
+          <div class="bento-tile-lbl">In Vault</div>
         </div>
       </div>
 
       <!-- Top muted ads -->
       <div x-show="stats?.top_muted_ads?.length > 0">
-        <div class="section-title">Most Muted This Month</div>
-        <div class="card" style="padding: 4px 14px;">
-          <template x-for="(ad, i) in stats.top_muted_ads" :key="i">
+        <div class="sec-title">Top Muted Ads</div>
+        <div class="top-ads-card">
+          <template x-for="(ad, i) in stats?.top_muted_ads || []" :key="i">
             <div class="top-ad-row">
               <span class="top-ad-rank" x-text="i + 1"></span>
-              <div class="top-ad-info">
-                <div class="top-ad-name" x-text="ad.name"></div>
-              </div>
+              <div class="top-ad-name" x-text="ad.name"></div>
               <div class="top-ad-bar-wrap">
                 <div class="top-ad-bar-bg">
                   <div class="top-ad-bar-fill"
-                       :style="`width: ${(ad.count / stats.top_muted_ads[0].count) * 100}%`"></div>
+                       :style="`width:${(ad.count/stats.top_muted_ads[0].count)*100}%`"></div>
                 </div>
                 <div class="top-ad-count" x-text="ad.count + 'x'"></div>
               </div>
@@ -1810,20 +1834,20 @@ input[type=range] {
 
       <!-- SNR history -->
       <div x-show="snrHistory.length > 0">
-        <div class="section-title">Placement History</div>
-        <div class="card" style="padding: 4px 14px;">
+        <div class="sec-title">Placement History</div>
+        <div class="snr-hist-card">
           <template x-for="(s, i) in snrHistory" :key="i">
             <div class="snr-hist-row">
-              <div class="snr-dot" :class="s.classification"></div>
+              <div class="snr-hist-dot" :class="s.classification"></div>
               <div style="flex:1;">
-                <div style="font-size:13px;font-weight:600;"
+                <div style="font-size:13px;font-weight:700;"
                      x-text="s.classification === 'pass' ? 'Good' : s.classification === 'warn' ? 'Acceptable' : 'Poor'"></div>
               </div>
               <div style="text-align:right;">
-                <div class="mono" style="font-size:13px;"
-                     :class="s.classification === 'pass' ? 'snr-pass' : s.classification === 'warn' ? 'snr-warn' : 'snr-fail'"
+                <div style="font-family:var(--font-m);font-size:12px;"
+                     :style="`color:${s.classification==='pass'?'var(--lime)':s.classification==='warn'?'var(--amber)':'var(--red)'}`"
                      x-text="s.snr_db.toFixed(0) + ' dB'"></div>
-                <div style="font-size:10px;color:var(--text2);" x-text="formatRecordedAt(s.measured_at)"></div>
+                <div style="font-family:var(--font-m);font-size:9px;color:var(--t2);" x-text="relTime(s.measured_at)"></div>
               </div>
             </div>
           </template>
@@ -1832,29 +1856,26 @@ input[type=range] {
 
       <!-- Mute log -->
       <div x-show="muteLog.length > 0">
-        <div class="section-title">Mute Log</div>
-        <div class="card" style="padding: 4px 14px;">
-          <template x-for="(entry, i) in muteLog" :key="entry.id">
-            <div class="log-row" :class="entry.was_false_positive ? 'fp' : ''">
+        <div class="sec-title">Mute Log</div>
+        <div class="log-card">
+          <template x-for="(e, i) in muteLog" :key="e.id">
+            <div class="log-row" :class="e.was_false_positive ? 'fp-row' : ''">
               <div class="log-ad">
-                <div class="log-ad-name" x-text="entry.ad_name || ('Ad #' + entry.ad_id)"></div>
+                <div class="log-ad-name" x-text="e.ad_name || ('Ad #' + e.ad_id)"></div>
                 <div class="log-meta">
-                  <span x-text="entry.mute_method?.toUpperCase()"></span>
-                  <span x-show="entry.confidence_score"> · <span x-text="entry.confidence_score"></span> conf</span>
-                  <span x-show="entry.was_false_positive"> · <span class="fp-badge">FALSE+</span></span>
+                  <span x-text="e.mute_method?.toUpperCase()"></span>
+                  <span x-show="e.confidence_score"> · <span x-text="e.confidence_score"></span></span>
+                  <span class="exile-badge" x-show="e.was_false_positive">EXILED</span>
                 </div>
               </div>
               <div class="log-right">
-                <div class="log-dur" x-text="entry.duration_actual ? entry.duration_actual.toFixed(1) + 's' : '—'"></div>
-                <div class="log-time" x-text="formatRecordedAt(entry.muted_at)"></div>
+                <div class="log-dur" x-text="e.duration_actual ? e.duration_actual.toFixed(1)+'s' : '—'"></div>
+                <div class="log-time" x-text="relTime(e.muted_at)"></div>
               </div>
             </div>
           </template>
         </div>
-
-        <button class="load-more-btn"
-                x-show="muteLog.length < muteLogTotal"
-                @click="loadMoreLog()">
+        <button class="load-more" x-show="muteLog.length < muteLogTotal" @click="loadMoreLog()">
           Load More
         </button>
       </div>
@@ -1862,28 +1883,25 @@ input[type=range] {
       <div style="height:16px;"></div>
     </div><!-- /stats -->
 
-  </div><!-- /main-scroll -->
+  </div><!-- /scroll-area -->
 
-  <!-- Bottom nav -->
-  <div class="bottom-nav">
-    <div class="nav-item" :class="currentView === 'control' ? 'active' : ''"
-         @click="switchView('control')">
+  <!-- Bottom Nav -->
+  <div class="nav">
+    <div class="nav-item" :class="view === 'control' ? 'active' : ''" @click="switchView('control')">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
       </svg>
       Control
       <div class="nav-dot"></div>
     </div>
-    <div class="nav-item" :class="currentView === 'recordings' ? 'active' : ''"
-         @click="switchView('recordings')">
+    <div class="nav-item" :class="view === 'recordings' ? 'active' : ''" @click="switchView('recordings')">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
       </svg>
       Recordings
       <div class="nav-dot"></div>
     </div>
-    <div class="nav-item" :class="currentView === 'stats' ? 'active' : ''"
-         @click="switchView('stats')">
+    <div class="nav-item" :class="view === 'stats' ? 'active' : ''" @click="switchView('stats')">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
       </svg>
@@ -1894,9 +1912,9 @@ input[type=range] {
 
 </div><!-- /app -->
 
-<!-- ── SETTINGS PANEL ─────────────────────────────────────────────── -->
+<!-- ── SETTINGS ────────────────────────────────────────────────── -->
 <div class="settings-panel" :class="showSettings ? 'open' : ''">
-  <div class="settings-header">
+  <div class="settings-hdr">
     <div class="settings-title">Settings</div>
     <div class="icon-btn" @click="showSettings = false">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1906,49 +1924,46 @@ input[type=range] {
   </div>
   <div class="settings-body">
 
-    <!-- Connection -->
-    <div class="settings-section">
-      <div class="settings-section-title">Connection</div>
+    <div class="settings-sec">
+      <div class="settings-sec-title">Connection</div>
       <div class="form-group">
         <label class="form-label">Pi IP Address</label>
-        <input class="form-input" type="text" x-model="piAddress" placeholder="192.168.1.45">
+        <input class="form-input" type="text" x-model="piAddress">
       </div>
       <div class="form-group">
         <label class="form-label">API Secret</label>
-        <input class="form-input" type="password" x-model="apiSecret" placeholder="••••••••">
+        <input class="form-input" type="password" x-model="apiSecret">
       </div>
-      <button class="btn-sm btn-primary" style="width:100%;height:48px;margin-top:6px;" @click="saveConnectionSettings()">
+      <button class="btn btn-lime" style="width:100%;height:46px;margin-top:6px;" @click="saveConnection()">
         Save Connection
       </button>
-      <div style="margin-top:10px;font-size:11px;color:var(--text2);font-family:var(--font-mono);">
-        Status: <span :class="isOnline ? 'text-green' : 'text-red'" x-text="isOnline ? 'Connected · ' + formatUptime(uptime) : 'Offline'"></span>
+      <div style="margin-top:8px;font-family:var(--font-m);font-size:10px;color:var(--t2);">
+        <span :style="`color:${isOnline?'var(--lime)':'var(--red)'}`"
+              x-text="isOnline ? '● Connected · ' + formatUptime(uptime) : '● Offline'"></span>
       </div>
     </div>
 
-    <!-- Mute Backend -->
-    <div class="settings-section">
-      <div class="settings-section-title">Mute Method</div>
+    <div class="settings-sec">
+      <div class="settings-sec-title">Mute Method</div>
       <div class="form-label">Backend</div>
       <div class="radio-group">
-        <div class="radio-option" :class="muteBackend === 'ir' ? 'selected' : ''" @click="setBackend('ir')">IR Blaster</div>
-        <div class="radio-option" :class="muteBackend === 'cec' ? 'selected' : ''" @click="setBackend('cec')">HDMI CEC</div>
+        <div class="radio-opt" :class="muteBackend === 'ir' ? 'selected' : ''" @click="muteBackend='ir'">IR Blaster</div>
+        <div class="radio-opt" :class="muteBackend === 'cec' ? 'selected' : ''" @click="muteBackend='cec'">HDMI CEC</div>
       </div>
-
-      <div x-show="muteBackend === 'ir'" class="mt-12">
+      <div x-show="muteBackend === 'ir'" style="margin-top:12px;">
         <div class="form-group">
           <label class="form-label">Remote Name</label>
-          <input class="form-input" type="text" x-model="irRemoteName" placeholder="hisense">
+          <input class="form-input" type="text" x-model="irRemoteName">
         </div>
         <div class="form-group">
           <label class="form-label">Mute Key</label>
-          <input class="form-input" type="text" x-model="irKeyMute" placeholder="KEY_MUTE">
+          <input class="form-input" type="text" x-model="irKeyMute">
         </div>
       </div>
     </div>
 
-    <!-- Detection Tuning -->
-    <div class="settings-section">
-      <div class="settings-section-title">Detection Tuning</div>
+    <div class="settings-sec">
+      <div class="settings-sec-title">Detection Tuning</div>
 
       <div class="settings-row">
         <div>
@@ -1956,790 +1971,550 @@ input[type=range] {
           <div class="settings-row-sub">Higher = fewer false positives</div>
         </div>
       </div>
-      <div class="slider-wrap mt-8">
-        <input type="range" min="80" max="250" step="5" x-model.number="confidenceThreshold">
+      <div class="slider-row">
+        <input type="range" min="10" max="100" step="5" x-model.number="confidenceThreshold">
         <span class="slider-val" x-text="confidenceThreshold"></span>
       </div>
 
-      <div class="settings-row mt-12">
+      <div class="settings-row" style="margin-top:12px;">
         <div>
           <div class="settings-row-label">Safety Margin</div>
-          <div class="settings-row-sub">Unmute this many seconds before ad ends</div>
+          <div class="settings-row-sub">Unmute before ad ends (seconds)</div>
         </div>
       </div>
-      <div class="slider-wrap mt-8">
-        <input type="range" min="0.5" max="3.0" step="0.5" x-model.number="safetyMargin">
+      <div class="slider-row">
+        <input type="range" min="0.5" max="3" step="0.5" x-model.number="safetyMargin">
         <span class="slider-val" x-text="safetyMargin + 's'"></span>
       </div>
     </div>
 
-    <!-- SNR Test -->
-    <div class="settings-section">
-      <div class="settings-section-title">Placement</div>
-      <button class="btn-sm btn-secondary" style="width:100%;height:48px;" @click="openSnrModal()">
+    <div class="settings-sec">
+      <div class="settings-sec-title">Placement</div>
+      <button class="btn btn-ghost" style="width:100%;height:46px;" @click="showSnrModal=true;showSettings=false;">
         Run SNR Placement Test
       </button>
     </div>
 
-    <!-- Danger zone -->
-    <div class="settings-section">
-      <div class="settings-section-title" style="color:var(--red);border-color:var(--red-dim);">Danger Zone</div>
-      <button class="danger-btn" @click="confirmDanger('clearLog')">Clear Mute History</button>
+    <div class="settings-sec">
+      <div class="settings-sec-title" style="color:var(--red);border-color:rgba(255,59,48,.1);">Danger Zone</div>
+      <button class="danger-btn" @click="if(confirm('Clear all mute history?'))toast('Coming soon','info')">
+        Clear Mute History
+      </button>
     </div>
 
   </div>
 </div>
 
-<!-- ── SNR MODAL ──────────────────────────────────────────────────── -->
-<div class="modal-overlay" x-show="showSnrModal" x-transition.opacity @click.self="showSnrModal = false">
+<!-- ── SNR MODAL ───────────────────────────────────────────────── -->
+<div class="modal-overlay" x-show="showSnrModal" x-transition.opacity @click.self="showSnrModal=false">
   <div class="modal-sheet" @click.stop>
     <div class="modal-handle"></div>
-    <div class="modal-title">Mic Placement Test</div>
+    <div class="modal-title">Placement Test</div>
 
     <div x-show="!snrTestResult && !snrTesting"
-         style="text-align:center;padding:20px 0;color:var(--text2);">
-      <p style="font-size:14px;line-height:1.6;">Tests current SNR by analysing live audio from the mic. Make sure the TV is playing audio.</p>
+         style="text-align:center;padding:20px 0;color:var(--t2);font-size:13px;font-weight:500;">
+      Ensure the TV is playing audio before running the test.
     </div>
 
-    <div x-show="snrTesting" style="text-align:center;padding:30px 0;">
-      <div class="spinner" style="width:32px;height:32px;margin:0 auto 12px;border-width:3px;"></div>
-      <p style="font-size:14px;color:var(--text1);">Analysing mic signal...</p>
+    <div x-show="snrTesting" style="text-align:center;padding:28px 0;">
+      <div class="spin" style="width:28px;height:28px;border-width:3px;margin:0 auto 10px;"></div>
+      <p style="font-size:13px;color:var(--t1);font-weight:600;">Sampling 3 seconds...</p>
     </div>
 
-    <div class="snr-result-big" x-show="snrTestResult && !snrTesting">
-      <div class="snr-result-num"
-           :class="snrTestResult?.classification === 'pass' ? 'text-green' : snrTestResult?.classification === 'warn' ? 'text-amber' : 'text-red'"
+    <div class="snr-big" x-show="snrTestResult && !snrTesting">
+      <div class="snr-big-num"
+           :style="`color:${snrTestResult?.classification==='pass'?'var(--lime)':snrTestResult?.classification==='warn'?'var(--amber)':'var(--red)'}`"
            x-text="snrTestResult?.snr_db + ' dB'"></div>
-      <div class="snr-result-class"
-           :class="snrTestResult?.classification === 'pass' ? 'text-green' : snrTestResult?.classification === 'warn' ? 'text-amber' : 'text-red'"
-           x-text="snrTestResult?.classification === 'pass' ? '✓ Excellent placement' : snrTestResult?.classification === 'warn' ? '⚠ Acceptable — consider adjusting' : '✕ Poor — reposition mic clip'"></div>
-      <p class="snr-result-note" x-text="snrTestResult?.note"></p>
+      <div class="snr-big-cls"
+           :style="`color:${snrTestResult?.classification==='pass'?'var(--lime)':snrTestResult?.classification==='warn'?'var(--amber)':'var(--red)'}`"
+           x-text="snrTestResult?.classification==='pass'?'✓ Excellent':snrTestResult?.classification==='warn'?'⚠ Acceptable':'✕ Poor — reposition mic'"></div>
+      <p class="snr-big-note" x-text="snrTestResult?.note"></p>
     </div>
 
-    <div class="btn-row mt-16">
-      <button class="btn-sm btn-secondary" @click="showSnrModal = false">Close</button>
-      <button class="btn-sm btn-primary" :disabled="snrTesting" @click="runSnrTest()">
-        <span x-show="snrTesting"><div class="spinner"></div></span>
+    <div class="btn-row" style="margin-top:16px;">
+      <button class="btn btn-ghost" @click="showSnrModal=false">Close</button>
+      <button class="btn btn-lime" :disabled="snrTesting" @click="runSnrTest()">
+        <span x-show="snrTesting"><div class="spin"></div></span>
         <span x-text="snrTesting ? 'Testing...' : 'Test Again'"></span>
       </button>
     </div>
   </div>
 </div>
 
-<!-- ── TOAST CONTAINER ────────────────────────────────────────────── -->
-<div class="toast-container">
-  <template x-for="toast in toasts" :key="toast.id">
-    <div class="toast" :class="toast.type">
-      <svg x-show="toast.type === 'success'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="var(--green)">
+<!-- ── TOASTS ──────────────────────────────────────────────────── -->
+<div class="toast-zone">
+  <template x-for="t in toasts" :key="t.id">
+    <div class="toast" :class="t.type">
+      <svg x-show="t.type==='success'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="var(--lime)">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
       </svg>
-      <svg x-show="toast.type === 'error'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="var(--red)">
+      <svg x-show="t.type==='error'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="var(--red)">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
       </svg>
-      <svg x-show="toast.type === 'info'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="var(--amber)">
+      <svg x-show="t.type==='info'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="var(--amber)">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
       </svg>
-      <span x-text="toast.message"></span>
+      <span x-text="t.msg"></span>
     </div>
   </template>
 </div>
 
-<!-- ── JAVASCRIPT ─────────────────────────────────────────────────── -->
+<!-- ── JS ─────────────────────────────────────────────────────── -->
 <script>
-// Pure JS SHA-256 — works on HTTP (no secure context required)
-// crypto.subtle requires HTTPS which we don't have on local network
-function sha256(message) {
-  function rightRotate(value, amount) {
-    return (value >>> amount) | (value << (32 - amount));
-  }
-  const mathPow = Math.pow;
-  const maxWord = mathPow(2, 32);
-  let lengthProperty = 'length';
-  let i, j, result = '';
-  const words = [];
-  const asciiBitLength = message[lengthProperty] * 8;
-  let hash = [], k = [];
-  let primeCounter = k[lengthProperty];
-
-  const isComposite = {};
-  for (let candidate = 2; primeCounter < 64; candidate++) {
-    if (!isComposite[candidate]) {
-      for (i = 0; i < 313; i += candidate) isComposite[i] = candidate;
-      hash[primeCounter] = (mathPow(candidate, .5) * maxWord) | 0;
-      k[primeCounter++] = (mathPow(candidate, 1/3) * maxWord) | 0;
+/* ── Pure JS HMAC-SHA256 (HTTP safe — no crypto.subtle needed) ── */
+/* ── Pure JS HMAC-SHA256 (HTTP safe — no crypto.subtle needed) ── */
+function sha256(msg){
+  function rr(v,a){return(v>>>a)|(v<<(32-a));}
+  const mp=Math.pow,mw=mp(2,32);
+  let i,j,r='';
+  const w=[],k=[];let h=[];let pc=k.length;
+  const ic={};
+  for(let c=2;pc<64;c++){
+    if(!ic[c]){
+      for(i=0;i<313;i+=c)ic[i]=c;
+      h[pc]=(mp(c,.5)*mw)|0;
+      k[pc++]=(mp(c,1/3)*mw)|0;
     }
   }
-
-  message += '\x80';
-  while (message[lengthProperty] % 64 - 56) message += '\x00';
-  for (i = 0; i < message[lengthProperty]; i++) {
-    j = message.charCodeAt(i);
-    if (j >> 8) return;
-    words[i >> 2] |= j << ((3 - i) % 4) * 8;
+  
+  // THE FIX: Calculate the length BEFORE adding padding zeros!
+  const abl = msg.length * 8; 
+  
+  msg+='\x80';
+  while(msg.length%64-56)msg+='\x00';
+  
+  for(i=0;i<msg.length;i++){
+    j=msg.charCodeAt(i);
+    if(j>>8)return;
+    w[i>>2]|=j<<((3-i)%4)*8;
   }
-  words[words[lengthProperty]] = ((asciiBitLength / maxWord) | 0);
-  words[words[lengthProperty]] = (asciiBitLength);
-
-  for (j = 0; j < words[lengthProperty];) {
-    const w = words.slice(j, j += 16);
-    const oldHash = hash.slice(0);
-    for (i = 0; i < 64; i++) {
-      const i2 = i + j - 16;
-      const w15 = w[i - 15], w2 = w[i - 2];
-      const a = hash[0], e = hash[4];
-      const temp1 = hash[7]
-        + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25))
-        + ((e & hash[5]) ^ (~e & hash[6]))
-        + k[i]
-        + (w[i] = (i < 16) ? w[i] : (
-          w[i - 16]
-          + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3))
-          + w[i - 7]
-          + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))
-        ) | 0);
-      const temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22))
-        + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
-      hash = [(temp1 + temp2) | 0].concat(hash);
-      hash[4] = (hash[4] + temp1) | 0;
-      hash.length = 8;
+  w[w.length]=(abl/mw)|0;
+  w[w.length]=abl;
+  for(j=0;j<w.length;){
+    const ws=w.slice(j,j+=16),oh=h.slice(0);
+    for(i=0;i<64;i++){
+      const i2=i+j-16,w15=ws[i-15],w2=ws[i-2];
+      const a=h[0],e=h[4];
+      const t1=h[7]+(rr(e,6)^rr(e,11)^rr(e,25))+((e&h[5])^(~e&h[6]))+k[i]+(ws[i]=(i<16)?ws[i]:(ws[i-16]+(rr(w15,7)^rr(w15,18)^(w15>>>3))+ws[i-7]+(rr(w2,17)^rr(w2,19)^(w2>>>10)))|0);
+      const t2=(rr(a,2)^rr(a,13)^rr(a,22))+((a&h[1])^(a&h[2])^(h[1]&h[2]));
+      h=[(t1+t2)|0].concat(h);h[4]=(h[4]+t1)|0;h.length=8;
     }
-    hash = hash.map((x, i) => (x + oldHash[i]) | 0);
+    h=h.map((x,i)=>(x+oh[i])|0);
   }
-  for (i = 0; i < 8; i++) {
-    for (j = 3; j + 1; j--) {
-      const b = (hash[i] >> (j * 8)) & 255;
-      result += ((b < 16) ? 0 : '') + b.toString(16);
-    }
-  }
-  return result;
+  for(i=0;i<8;i++)for(j=3;j+1;j--){const b=(h[i]>>(j*8))&255;r+=((b<16)?0:'')+b.toString(16);}
+  return r;
 }
 
-function hmacSha256(key, message) {
-  const blockSize = 64;
-  let keyBytes = [];
-  for (let i = 0; i < key.length; i++) keyBytes.push(key.charCodeAt(i));
-  if (keyBytes.length > blockSize) {
-    const h = sha256(key);
-    keyBytes = [];
-    for (let i = 0; i < h.length; i += 2)
-      keyBytes.push(parseInt(h.substr(i, 2), 16));
-  }
-  while (keyBytes.length < blockSize) keyBytes.push(0);
-
-  const opad = keyBytes.map(b => b ^ 0x5c);
-  const ipad = keyBytes.map(b => b ^ 0x36);
-
-  const ipadStr = ipad.map(b => String.fromCharCode(b)).join('');
-  const opadStr = opad.map(b => String.fromCharCode(b)).join('');
-
-  const innerHash = sha256(ipadStr + message);
-  let innerBytes = '';
-  for (let i = 0; i < innerHash.length; i += 2)
-    innerBytes += String.fromCharCode(parseInt(innerHash.substr(i, 2), 16));
-
-  return sha256(opadStr + innerBytes);
+function hmacSha256(key,msg){
+  const bs=64;let kb=[];
+  for(let i=0;i<key.length;i++)kb.push(key.charCodeAt(i));
+  if(kb.length>bs){const h=sha256(key);kb=[];for(let i=0;i<h.length;i+=2)kb.push(parseInt(h.substr(i,2),16));}
+  while(kb.length<bs)kb.push(0);
+  const op=kb.map(b=>b^0x5c),ip=kb.map(b=>b^0x36);
+  const is=ip.map(b=>String.fromCharCode(b)).join('');
+  const os=op.map(b=>String.fromCharCode(b)).join('');
+  const ih=sha256(is+msg);
+  let ib='';
+  for(let i=0;i<ih.length;i+=2)ib+=String.fromCharCode(parseInt(ih.substr(i,2),16));
+  return sha256(os+ib);
 }
 
-async function hmacSign(secret, method, path, body = '') {
-  const ts  = Math.floor(Date.now() / 1000).toString();
-  const msg = ts + method.toUpperCase() + path + body;
-  const sig = hmacSha256(secret, msg);
-  return `HMAC ${ts}.${sig}`;
+async function hmacSign(secret,method,path,body=''){
+  const ts=Math.floor(Date.now()/1000).toString();
+  const msg=ts+method.toUpperCase()+path+body;
+  return `HMAC ${ts}.${hmacSha256(secret,msg)}`;
 }
 
-// ── WAVEFORM RENDERER ─────────────────────────────────────────────
-async function renderWaveform(canvas, audioUrl) {
-  try {
-    const resp = await fetch(audioUrl);
-    if (!resp.ok) return;
-    const buf  = await resp.arrayBuffer();
-    const ctx2 = new (window.AudioContext || window.webkitAudioContext)();
-    const decoded = await ctx2.decodeAudioData(buf);
+/* ── Waveform renderer ── */
+async function drawWave(canvas,url){
+  try{
+    const r=await fetch(url);
+    if(!r.ok)return;
+    const buf=await r.arrayBuffer();
+    const ctx2=new(window.AudioContext||window.webkitAudioContext)();
+    const dec=await ctx2.decodeAudioData(buf);
     ctx2.close();
-
-    const data   = decoded.getChannelData(0);
-    const step   = Math.ceil(data.length / canvas.width);
-    const ctx    = canvas.getContext('2d');
-    const W      = canvas.width;
-    const H      = canvas.height;
-    const mid    = H / 2;
-
-    ctx.clearRect(0, 0, W, H);
-    ctx.strokeStyle = '#F5A62366';
-    ctx.lineWidth   = 1;
-
-    for (let i = 0; i < W; i++) {
-      let min = 1, max = -1;
-      for (let j = 0; j < step; j++) {
-        const val = data[i * step + j] || 0;
-        if (val < min) min = val;
-        if (val > max) max = val;
-      }
-      const yLow  = mid + min * mid * 0.9;
-      const yHigh = mid + max * mid * 0.9;
-      ctx.beginPath();
-      ctx.moveTo(i, yLow);
-      ctx.lineTo(i, yHigh);
-      ctx.stroke();
+    const d=dec.getChannelData(0);
+    const step=Math.ceil(d.length/canvas.width);
+    const ctx=canvas.getContext('2d');
+    const W=canvas.width,H=canvas.height,mid=H/2;
+    ctx.clearRect(0,0,W,H);
+    for(let i=0;i<W;i++){
+      let mn=1,mx=-1;
+      for(let j=0;j<step;j++){const v=d[i*step+j]||0;if(v<mn)mn=v;if(v>mx)mx=v;}
+      const yl=mid+mn*mid*.85,yh=mid+mx*mid*.85;
+      ctx.strokeStyle='rgba(204,255,0,0.5)';
+      ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(i,yl);ctx.lineTo(i,yh);ctx.stroke();
     }
-
-    // Overlay gradient
-    const grad = ctx.createLinearGradient(0, 0, W, 0);
-    grad.addColorStop(0,   'rgba(245,166,35,0.15)');
-    grad.addColorStop(0.5, 'rgba(245,166,35,0.05)');
-    grad.addColorStop(1,   'rgba(245,166,35,0.15)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, W, H);
-  } catch(e) {
-    // Silently fail — canvas stays grey
-  }
+  }catch(e){}
 }
 
-// ── ALPINE APP ────────────────────────────────────────────────────
-function admute() {
+/* ── Alpine app ── */
+function admute(){
   return {
+    isSetup:false,
+    setupStep:1,
+    setupAddress:'',
+    setupSecret:'',
+    setupTesting:false,
 
-    // ── Setup ──────────────────────────────────────────────────
-    isSetup:       false,
-    setupStep:     1,
-    setupAddress:  '',
-    setupSecret:   '',
-    setupTesting:  false,
+    piAddress:'',
+    apiSecret:'',
+    isOnline:false,
+    _authFailed:false,
 
-    // ── Connection ─────────────────────────────────────────────
-    piAddress:  '',
-    apiSecret:  '',
-    isOnline:   false,
+    isMuted:false,
+    currentAdName:null,
+    currentAdId:null,
+    micActive:true,
+    muteBackend:'ir',
+    vaultSize:0,
+    snrDb:null,
+    snrClass:null,
+    uptime:0,
+    muteStartTime:null,
+    muteDuration:0,
+    muteCountdown:0,
+    countdownPct:100,
+    _cTimer:null,
 
-    // ── Device status ──────────────────────────────────────────
-    isMuted:       false,
-    currentAdName: null,
-    currentAdId:   null,
-    micActive:     true,
-    muteBackend:   'ir',
-    vaultSize:     0,
-    snrDb:         null,
-    snrClass:      null,
-    uptime:        0,
+    view:'control',
+    showSettings:false,
 
-    muteStartTime:   null,
-    muteDuration:    0,
-    muteCountdown:   0,
-    countdownPct:    100,
-    _countdownTimer: null,
-
-    // ── Views ──────────────────────────────────────────────────
-    currentView:  'control',
-    showSettings: false,
-
-    // ── Recording ──────────────────────────────────────────────
-    isRecording:     false,
+    isRecording:false,
     recordingSeconds:0,
-    _recTimer:       null,
+    _recTimer:null,
 
-    // ── Recordings view ────────────────────────────────────────
-    recordings:      [],
-    expandedRecording: null,
-    ingestingId:     null,
-    deletingId:      null,
-    deleteConfirmId: null,
+    recordings:[],
+    expandedRec:null,
+    ingestingId:null,
+    deletingId:null,
+    deleteConfirmId:null,
 
-    // ── Stats ──────────────────────────────────────────────────
-    stats:         null,
-    muteLog:       [],
-    muteLogPage:   1,
-    muteLogTotal:  0,
-    snrHistory:    [],
+    stats:null,
+    muteLog:[],
+    muteLogPage:1,
+    muteLogTotal:0,
+    snrHistory:[],
 
-    // ── SNR ────────────────────────────────────────────────────
-    showSnrModal:  false,
-    snrTestResult: null,
-    snrTesting:    false,
+    showSnrModal:false,
+    snrTestResult:null,
+    snrTesting:false,
 
-    // ── Settings ───────────────────────────────────────────────
-    confidenceThreshold: 150,
-    safetyMargin:        1.5,
-    irRemoteName:        'hisense',
-    irKeyMute:           'KEY_MUTE',
+    confidenceThreshold:25,
+    safetyMargin:1.5,
+    irRemoteName:'hisense',
+    irKeyMute:'KEY_MUTE',
 
-    // ── Toasts ─────────────────────────────────────────────────
-    toasts: [],
-    _toastId: 0,
-    _authFailed: false,
+    toasts:[],
+    _tid:0,
 
-    // ─────────────────────────────────────────────────────────────
-    // INIT
-    // ─────────────────────────────────────────────────────────────
-    init() {
-      const stored = localStorage.getItem('admute_cfg');
-      if (stored) {
-        try {
-          const cfg = JSON.parse(stored);
-          this.piAddress = cfg.piAddress || '';
-          this.apiSecret = cfg.apiSecret || '';
-          if (this.piAddress && this.apiSecret) {
-            this.isSetup = true;
+    /* ── Init ── */
+    init(){
+      const s=localStorage.getItem('admute_cfg');
+      if(s){
+        try{
+          const c=JSON.parse(s);
+          this.piAddress=c.piAddress||'';
+          this.apiSecret=c.apiSecret||'';
+          if(this.piAddress&&this.apiSecret){
+            this.isSetup=true;
             this.startPolling();
             this.loadConfig();
           }
-        } catch(e) {}
+        }catch(e){}
       }
-    },
-
-    // ─────────────────────────────────────────────────────────────
-    // SETUP
-    // ─────────────────────────────────────────────────────────────
-    async testConnection() {
-      this.setupTesting = true;
-      try {
-        const r = await fetch(`http://${this.setupAddress}:5000/api/health`);
-        if (r.ok) {
-          this.piAddress = this.setupAddress;
-          this.setupStep = 2;
-        } else {
-          this.toast('Could not reach Pi at that address', 'error');
+      document.addEventListener('visibilitychange',()=>{
+        if(document.visibilityState==='visible'){
+          const s=localStorage.getItem('admute_cfg');
+          if(s){try{const c=JSON.parse(s);this.piAddress=c.piAddress||'';this.apiSecret=c.apiSecret||'';}catch(e){}}
         }
-      } catch(e) {
-        this.toast('Connection failed — check the IP address', 'error');
-      }
-      this.setupTesting = false;
+      });
     },
 
-    saveSecret() {
-      this.apiSecret = this.setupSecret;
-      this.setupStep = 3;
+    /* ── Setup ── */
+    async testConnection(){
+      this.setupTesting=true;
+      try{
+        const r=await fetch(`http://${this.setupAddress}:5000/api/health`);
+        if(r.ok){this.piAddress=this.setupAddress;this.setupStep=2;}
+        else this.toast('Could not reach Pi','error');
+      }catch(e){this.toast('Connection failed — check IP','error');}
+      this.setupTesting=false;
     },
-
-    async finishSetup() {
-      localStorage.setItem('admute_cfg', JSON.stringify({
-        piAddress: this.piAddress,
-        apiSecret: this.apiSecret,
-      }));
-      this.isSetup = true;
+    saveSecret(){this.apiSecret=this.setupSecret.trim();this.setupStep=3;},
+    async finishSetup(){
+      localStorage.setItem('admute_cfg',JSON.stringify({piAddress:this.piAddress,apiSecret:this.apiSecret}));
+      this.isSetup=true;
       this.startPolling();
       await this.loadConfig();
     },
 
-    // ─────────────────────────────────────────────────────────────
-    // API CLIENT
-    // ─────────────────────────────────────────────────────────────
-    apiUrl(path) {
-      return `http://${this.piAddress}:5000${path}`;
-    },
+    /* ── API ── */
+    apiUrl(p){return `http://${this.piAddress}:5000${p}`;},
 
-    async api(method, path, body = null) {
-      const bodyStr  = body ? JSON.stringify(body) : '';
-      const authHdr  = await hmacSign(this.apiSecret, method, path, bodyStr);
-      const opts     = {
-        method,
-        headers: {
-          'Authorization': authHdr,
-          'Content-Type':  'application/json',
-        },
-      };
-      if (bodyStr) opts.body = bodyStr;
-
-      const r = await fetch(this.apiUrl(path), opts);
-      if (r.status === 401) {
-          // Only show the toast once — stop spamming
-          if (!this._authFailed) {
-              this._authFailed = true;
-              this.toast('Authentication failed — check secret in Settings', 'error');
-          }
-          throw new Error('unauthorized');
+    async api(method,path,body=null){
+      const bs=body?JSON.stringify(body):'';
+      const auth=await hmacSign(this.apiSecret,method,path,bs);
+      const opts={method,headers:{'Authorization':auth,'Content-Type':'application/json'}};
+      if(bs)opts.body=bs;
+      const r=await fetch(this.apiUrl(path),opts);
+      if(r.status===401){
+        if(!this._authFailed){
+          this._authFailed=true;
+          this.toast('Authentication failed — check secret in Settings','error');
+        }
+        throw new Error('unauthorized');
       }
-      // Clear the flag on any successful request
-      this._authFailed = false;
+      this._authFailed=false;
       return r.json();
     },
 
-    // ─────────────────────────────────────────────────────────────
-    // POLLING
-    // ─────────────────────────────────────────────────────────────
-    startPolling() {
+    /* ── Polling ── */
+    startPolling(){
       this.pollStatus();
-      setInterval(() => this.pollStatus(), 2000);
+      setInterval(()=>this.pollStatus(),2000);
     },
 
-    async pollStatus() {
-      try {
-        const s = await this.api('GET', '/api/status');
-        this.isOnline      = true;
-        this.isMuted       = s.is_muted;
-        this.currentAdName = s.current_ad_name;
-        this.currentAdId   = s.current_ad_id;
-        this.micActive     = s.mic_active;
-        this.muteBackend   = s.mute_backend;
-        this.vaultSize     = s.vault_size;
-        this.uptime        = s.uptime;
-        if (s.snr_db !== null) {
-          this.snrDb    = s.snr_db;
-          this.snrClass = s.snr_class;
-        }
-
-        // Manage countdown timer
-        if (s.is_muted && s.current_ad_id) {
-          if (!this._countdownTimer) {
-            this._startCountdown();
-          }
-        } else {
-          this._stopCountdown();
-          this.muteCountdown = 0;
-          this.countdownPct  = 100;
-        }
-      } catch(e) {
-        this.isOnline = false;
-      }
+    async pollStatus(){
+      try{
+        const s=await this.api('GET','/api/status');
+        this.isOnline=true;
+        this.isMuted=s.is_muted;
+        this.currentAdName=s.current_ad_name;
+        this.currentAdId=s.current_ad_id;
+        this.micActive=s.mic_active;
+        this.muteBackend=s.mute_backend;
+        this.vaultSize=s.vault_size;
+        this.uptime=s.uptime;
+        if(s.snr_db!==null){this.snrDb=s.snr_db;this.snrClass=s.snr_class;}
+        if(s.is_muted&&s.current_ad_id){if(!this._cTimer)this._startCdown();}
+        else{this._stopCdown();this.muteCountdown=0;this.countdownPct=100;}
+      }catch(e){this.isOnline=false;}
     },
 
-    _startCountdown() {
-      // We don't know exact duration from status, so show a decreasing timer
-      // using the mute_start time if available
-      if (this._countdownTimer) return;
-      this._countdownTimer = setInterval(() => {
-        if (!this.isMuted) {
-          this._stopCountdown();
-          return;
-        }
-        if (this.muteCountdown > 0) {
+    _startCdown(){
+      if(this._cTimer)return;
+      this._cTimer=setInterval(()=>{
+        if(!this.isMuted){this._stopCdown();return;}
+        if(this.muteCountdown>0){
           this.muteCountdown--;
-          this.countdownPct = (this.muteCountdown / this.muteDuration) * 100;
+          this.countdownPct=(this.muteCountdown/Math.max(this.muteDuration,1))*100;
         }
-      }, 1000);
+      },1000);
+    },
+    _stopCdown(){if(this._cTimer){clearInterval(this._cTimer);this._cTimer=null;}},
+
+    /* ── Control ── */
+    async toggleMute(){
+      try{await this.api('POST','/api/mute/toggle');await this.pollStatus();}
+      catch(e){this.toast('Mute command failed','error');}
     },
 
-    _stopCountdown() {
-      if (this._countdownTimer) {
-        clearInterval(this._countdownTimer);
-        this._countdownTimer = null;
-      }
-    },
-
-    // ─────────────────────────────────────────────────────────────
-    // CONTROL ACTIONS
-    // ─────────────────────────────────────────────────────────────
-    async toggleMute() {
-      try {
-        await this.api('POST', '/api/mute/toggle');
-        await this.pollStatus();
-      } catch(e) {
-        this.toast('Mute command failed', 'error');
-      }
-    },
-
-    async falsePositive() {
-      try {
-        const r = await this.api('POST', '/api/mute/false-positive');
-        if (r.ok) {
-          this.toast(`Flagged "${r.ad_name || 'ad'}" — marked for review`, 'info');
+    async falsePositive(){
+      try{
+        const r=await this.api('POST','/api/mute/false-positive');
+        if(r.ok){
+          this.toast(`"${r.ad_name||'Ad'}" exiled from vault — unmuted`,'info');
           await this.pollStatus();
         }
-      } catch(e) {
-        this.toast('False positive command failed', 'error');
+      }catch(e){this.toast('False positive command failed','error');}
+    },
+
+    async toggleMic(){
+      try{
+        const r=await this.api('POST','/api/mic/toggle');
+        if(r.ok){this.micActive=r.mic_active;this.toast(r.mic_active?'Mic on':'Mic off','info');}
+      }catch(e){this.toast('Mic toggle failed','error');}
+    },
+
+    async toggleRecord(){
+      if(this.isRecording){
+        clearInterval(this._recTimer);this._recTimer=null;
+        this.isRecording=false;
+        try{
+          const r=await this.api('POST','/api/record/stop');
+          if(r.ok){
+            this.toast('Saved — go to Recordings to ingest','success');
+            if(this.view==='recordings')this.loadRecordings();
+          }else this.toast(r.error||'Recording failed','error');
+        }catch(e){this.toast('Stop failed','error');}
+        this.recordingSeconds=0;
+      }else{
+        try{
+          const r=await this.api('POST','/api/record/start');
+          if(r.ok){
+            this.isRecording=true;this.recordingSeconds=0;
+            this._recTimer=setInterval(()=>this.recordingSeconds++,1000);
+          }else this.toast('Could not start recording','error');
+        }catch(e){this.toast('Start failed','error');}
       }
     },
 
-    async toggleMic() {
-      try {
-        const r = await this.api('POST', '/api/mic/toggle');
-        if (r.ok) {
-          this.micActive = r.mic_active;
-          this.toast(r.mic_active ? 'Microphone on' : 'Microphone off', 'info');
-        }
-      } catch(e) {
-        this.toast('Mic toggle failed', 'error');
-      }
+    /* ── Recordings ── */
+    async loadRecordings(){
+      try{
+        const d=await this.api('GET','/api/recordings');
+        this.recordings=d;
+        this.$nextTick(()=>d.forEach(r=>{
+          const c=document.getElementById('wv-'+r.id);
+          if(c)drawWave(c,this.apiUrl('/api/recordings/'+r.id+'/audio'));
+        }));
+      }catch(e){this.toast('Could not load recordings','error');}
     },
 
-    async toggleRecord() {
-      if (this.isRecording) {
-        // Stop
-        clearInterval(this._recTimer);
-        this._recTimer = null;
-        this.isRecording = false;
-        try {
-          const r = await this.api('POST', '/api/record/stop');
-          if (r.ok) {
-            this.toast('Saved — go to Recordings to ingest', 'success');
-            if (this.currentView === 'recordings') this.loadRecordings();
-          } else {
-            this.toast(r.error || 'Recording failed', 'error');
-          }
-        } catch(e) {
-          this.toast('Stop recording failed', 'error');
-        }
-        this.recordingSeconds = 0;
-      } else {
-        // Start
-        try {
-          const r = await this.api('POST', '/api/record/start');
-          if (r.ok) {
-            this.isRecording = true;
-            this.recordingSeconds = 0;
-            this._recTimer = setInterval(() => this.recordingSeconds++, 1000);
-          } else {
-            this.toast('Could not start recording', 'error');
-          }
-        } catch(e) {
-          this.toast('Start recording failed', 'error');
-        }
-      }
+    toggleRec(id){
+      this.expandedRec=this.expandedRec===id?null:id;
+      this.deleteConfirmId=null;
     },
 
-    // ─────────────────────────────────────────────────────────────
-    // RECORDINGS
-    // ─────────────────────────────────────────────────────────────
-    async loadRecordings() {
-      try {
-        const data = await this.api('GET', '/api/recordings');
-        this.recordings = data;
-        // Draw waveforms after render
-        this.$nextTick(() => {
-          data.forEach(rec => this.drawWaveform(rec));
+    async saveMetadata(rec){
+      try{
+        const r=await this.api('PATCH',`/api/recordings/${rec.id}`,{
+          streaming_service:rec.streaming_service,
+          category:rec.category,
+          notes:rec.notes
         });
-      } catch(e) {
-        this.toast('Could not load recordings', 'error');
-      }
-    },
-
-    drawWaveform(rec) {
-      const canvas = document.getElementById('wv-' + rec.id);
-      if (!canvas) return;
-      const url = this.apiUrl('/api/recordings/' + rec.id + '/audio');
-      // Build headers for auth — waveform uses pre-signed URL workaround
-      // For simplicity draw placeholder bars if audio not available
-      renderWaveform(canvas, url).catch(() => {
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#1A2333';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      });
-    },
-
-    toggleRec(id) {
-      this.expandedRecording = this.expandedRecording === id ? null : id;
-      this.deleteConfirmId   = null;
-    },
-
-    async saveMetadata(rec) {
-      try {
-        const r = await this.api('PATCH', `/api/recordings/${rec.id}`, {
-          streaming_service: rec.streaming_service,
-          category:          rec.category,
-          notes:             rec.notes,
-        });
-        if (r.ok) {
-          const el = document.getElementById('saved-' + rec.id);
-          if (el) {
-            el.textContent = '✓ Saved';
-            el.style.opacity = '1';
-            setTimeout(() => { el.style.opacity = '0'; }, 2000);
-          }
+        if(r.ok){
+          const el=document.getElementById('saved-'+rec.id);
+          if(el){el.textContent='✓ Saved';el.style.opacity='1';setTimeout(()=>el.style.opacity='0',2000);}
         }
-      } catch(e) {
-        this.toast('Save failed', 'error');
-      }
+      }catch(e){this.toast('Save failed','error');}
     },
 
-    async ingestRecording(rec) {
-      this.ingestingId = rec.id;
-      try {
-        const r = await this.api('POST', `/api/recordings/${rec.id}/ingest`);
-        if (r.ok) {
-          rec.status = 'ingested';
-          this.toast(`Added to vault — ${r.hash_count} hashes · ${r.duration}s`, 'success');
+    async ingestRecording(rec){
+      this.ingestingId=rec.id;
+      try{
+        const r=await this.api('POST',`/api/recordings/${rec.id}/ingest`);
+        if(r.ok){
+          rec.status='ingested';
+          this.toast(`Added to vault — ${r.hash_count} hashes · ${r.duration}s`,'success');
           this.vaultSize++;
-        } else {
-          this.toast(r.error || 'Ingest failed', 'error');
-        }
-      } catch(e) {
-        this.toast('Ingest failed', 'error');
-      }
-      this.ingestingId = null;
+        }else this.toast(r.error||'Ingest failed','error');
+      }catch(e){this.toast('Ingest failed','error');}
+      this.ingestingId=null;
     },
 
-    async deleteRecording(rec) {
-      this.deletingId = rec.id;
-      try {
-        const r = await this.api('DELETE', `/api/recordings/${rec.id}`, { confirm: true });
-        if (r.ok) {
-          const msg = r.purged?.ad
-            ? `Deleted — recording and ${r.purged.hashes || 0} hashes removed`
-            : 'Recording deleted';
-          this.toast(msg, 'success');
-          this.recordings = this.recordings.filter(r2 => r2.id !== rec.id);
-          this.deleteConfirmId = null;
-          this.expandedRecording = null;
-          if (r.purged?.ad) this.vaultSize = Math.max(0, this.vaultSize - 1);
-        } else {
-          this.toast(r.error || 'Delete failed', 'error');
-        }
-      } catch(e) {
-        this.toast('Delete failed', 'error');
-      }
-      this.deletingId = null;
+    async deleteRecording(rec){
+      this.deletingId=rec.id;
+      try{
+        const r=await this.api('DELETE',`/api/recordings/${rec.id}`,{confirm:true});
+        if(r.ok){
+          const msg=r.purged?.ad?`Deleted — ${r.purged.hashes||0} hashes purged`:'Recording deleted';
+          this.toast(msg,'success');
+          this.recordings=this.recordings.filter(x=>x.id!==rec.id);
+          this.deleteConfirmId=null;
+          this.expandedRec=null;
+          if(r.purged?.ad)this.vaultSize=Math.max(0,this.vaultSize-1);
+        }else this.toast(r.error||'Delete failed','error');
+      }catch(e){this.toast('Delete failed','error');}
+      this.deletingId=null;
     },
 
-    // ─────────────────────────────────────────────────────────────
-    // STATS
-    // ─────────────────────────────────────────────────────────────
-    async loadStats() {
-      try {
-        const summary = await this.api('GET', '/api/stats/summary');
-        this.stats = summary;
-
-        const log = await this.api('GET', '/api/stats/mute-log?page=1&limit=20');
-        this.muteLog      = log.items || [];
-        this.muteLogTotal = log.total || 0;
-        this.muteLogPage  = 1;
-
-        const snrHist = await this.api('GET', '/api/stats/snr-history');
-        this.snrHistory = snrHist || [];
-
-      } catch(e) {
-          this.toast('Could not load stats', 'error');
-      }
+    /* ── Stats ── */
+    async loadStats(){
+      try{
+        const sum=await this.api('GET','/api/stats/summary');
+        this.stats=sum;
+        const log=await this.api('GET','/api/stats/mute-log?page=1&limit=20');
+        this.muteLog=log.items||[];this.muteLogTotal=log.total||0;this.muteLogPage=1;
+        const snr=await this.api('GET','/api/stats/snr-history');
+        this.snrHistory=snr||[];
+      }catch(e){this.toast('Could not load stats','error');}
     },
 
-    async loadMoreLog() {
+    async loadMoreLog(){
       this.muteLogPage++;
-      try {
-        const r = await this.api('GET', `/api/stats/mute-log?page=${this.muteLogPage}&limit=20`);
-        this.muteLog      = [...this.muteLog, ...(r.items || [])];
-        this.muteLogTotal = r.total;
-      } catch(e) {
-        this.toast('Could not load more', 'error');
-      }
+      try{
+        const r=await this.api('GET',`/api/stats/mute-log?page=${this.muteLogPage}&limit=20`);
+        this.muteLog=[...this.muteLog,...(r.items||[])];
+        this.muteLogTotal=r.total;
+      }catch(e){this.toast('Could not load more','error');}
     },
 
-    // ─────────────────────────────────────────────────────────────
-    // SNR TEST
-    // ─────────────────────────────────────────────────────────────
-    openSnrModal() {
-      this.showSnrModal = true;
+    /* ── SNR ── */
+    openSnrModal(){this.showSnrModal=true;},
+
+    async runSnrTest(){
+      this.snrTesting=true;this.snrTestResult=null;
+      try{
+        const r=await this.api('POST','/api/snr-test');
+        if(r.ok){
+          this.snrTestResult=r;
+          this.snrDb=r.snr_db;this.snrClass=r.classification;
+        }else this.toast('SNR test failed','error');
+      }catch(e){this.toast('SNR test failed','error');}
+      this.snrTesting=false;
     },
 
-    async runSnrTest() {
-      this.snrTesting    = true;
-      this.snrTestResult = null;
-      try {
-        const r = await this.api('POST', '/api/snr-test');
-        if (r.ok) {
-          this.snrTestResult = r;
-          this.snrDb         = r.snr_db;
-          this.snrClass      = r.classification;
-        } else {
-          this.toast('SNR test failed', 'error');
-        }
-      } catch(e) {
-        this.toast('SNR test failed', 'error');
-      }
-      this.snrTesting = false;
+    /* ── Config ── */
+    async loadConfig(){
+      try{
+        const r=await this.api('GET','/api/config');
+        this.confidenceThreshold=r.match?.confidence_threshold||25;
+        this.safetyMargin=r.mute?.safety_margin_seconds||1.5;
+        this.irRemoteName=r.mute?.ir_remote_name||'hisense';
+        this.irKeyMute=r.mute?.ir_key_mute||'KEY_MUTE';
+        this.muteBackend=r.mute?.backend||'ir';
+      }catch(e){}
     },
 
-    // ─────────────────────────────────────────────────────────────
-    // SETTINGS
-    // ─────────────────────────────────────────────────────────────
-    async loadConfig() {
-      try {
-        const r = await this.api('GET', '/api/config');
-        this.confidenceThreshold = r.match?.confidence_threshold || 150;
-        this.safetyMargin        = r.mute?.safety_margin_seconds  || 1.5;
-        this.irRemoteName        = r.mute?.ir_remote_name          || 'hisense';
-        this.irKeyMute           = r.mute?.ir_key_mute             || 'KEY_MUTE';
-        this.muteBackend         = r.mute?.backend                 || 'ir';
-      } catch(e) {}
+    saveConnection(){
+      this.apiSecret = this.apiSecret.trim();
+      localStorage.setItem('admute_cfg',JSON.stringify({piAddress:this.piAddress,apiSecret:this.apiSecret}));
+      this._authFailed=false;
+      this.toast('Connection saved','success');
+      this.showSettings=false;
     },
 
-    saveConnectionSettings() {
-      localStorage.setItem('admute_cfg', JSON.stringify({
-        piAddress: this.piAddress,
-        apiSecret: this.apiSecret,
-      }));
-      this._authFailed = false;
-      this.toast('Connection settings saved', 'success');
-      this.showSettings = false;
+    /* ── View switching ── */
+    switchView(v){
+      this.view=v;
+      if(v==='recordings')this.loadRecordings();
+      if(v==='stats')this.loadStats();
     },
 
-    setBackend(b) {
-      this.muteBackend = b;
+    /* ── Toasts ── */
+    toast(msg,type='info'){
+      const id=++this._tid;
+      this.toasts.push({id,msg,type});
+      setTimeout(()=>{this.toasts=this.toasts.filter(t=>t.id!==id);},3500);
     },
 
-    confirmDanger(action) {
-      if (action === 'clearLog') {
-        if (confirm('Clear all mute history? This cannot be undone.')) {
-          this.toast('Mute history cleared (not yet implemented)', 'info');
-        }
-      }
+    /* ── Formatters ── */
+    formatUptime(s){
+      if(!s)return'—';
+      const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);
+      return h>0?`${h}h ${m}m`:`${m}m`;
     },
-
-    // ─────────────────────────────────────────────────────────────
-    // VIEW SWITCHING
-    // ─────────────────────────────────────────────────────────────
-    switchView(view) {
-      this.currentView = view;
-      if (view === 'recordings') this.loadRecordings();
-      if (view === 'stats')      this.loadStats();
+    formatRecTime(s){
+      const m=Math.floor(s/60),sec=s%60;
+      return`${m}:${sec.toString().padStart(2,'0')}`;
     },
-
-    // ─────────────────────────────────────────────────────────────
-    // TOASTS
-    // ─────────────────────────────────────────────────────────────
-    toast(message, type = 'info') {
-      const id = ++this._toastId;
-      this.toasts.push({ id, message, type });
-      setTimeout(() => {
-        this.toasts = this.toasts.filter(t => t.id !== id);
-      }, 3500);
+    formatDur(s){
+      if(!s)return'—';
+      const m=Math.floor(s/60),sec=Math.round(s%60);
+      return m>0?`${m}:${sec.toString().padStart(2,'0')}`:`0:${sec.toString().padStart(2,'0')}`;
     },
-
-    // ─────────────────────────────────────────────────────────────
-    // FORMATTERS
-    // ─────────────────────────────────────────────────────────────
-    formatUptime(secs) {
-      if (!secs) return '—';
-      const h = Math.floor(secs / 3600);
-      const m = Math.floor((secs % 3600) / 60);
-      if (h > 0) return `${h}h ${m}m`;
-      return `${m}m`;
+    relTime(dt){
+      if(!dt)return'';
+      try{
+        const d=new Date(dt),now=new Date(),diff=now-d;
+        if(diff<60000)return'Just now';
+        if(diff<3600000)return`${Math.floor(diff/60000)}m ago`;
+        if(diff<86400000)return`Today ${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
+        if(diff<172800000)return`Yesterday ${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
+        return d.toLocaleDateString([],{month:'short',day:'numeric'})+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+      }catch(e){return dt;}
     },
-
-    formatRecTime(secs) {
-      const m = Math.floor(secs / 60);
-      const s = secs % 60;
-      return `${m}:${s.toString().padStart(2,'0')}`;
+    formatMinHuman(m){
+      if(!m||m===0)return'';
+      const h=Math.floor(m/60),min=Math.round(m%60);
+      if(h===0)return`${min} minutes of ads muted`;
+      return`${h}h ${min>0?min+'m ':''} of ads back`;
     },
-
-    formatDuration(secs) {
-      if (!secs) return '—';
-      const m = Math.floor(secs / 60);
-      const s = Math.round(secs % 60);
-      return m > 0 ? `${m}:${s.toString().padStart(2,'0')}` : `0:${s.toString().padStart(2,'0')}`;
-    },
-
-    formatRecordedAt(dt) {
-      if (!dt) return '';
-      try {
-        const d    = new Date(dt);
-        const now  = new Date();
-        const diff = now - d;
-        if (diff < 60000)     return 'Just now';
-        if (diff < 3600000)   return `${Math.floor(diff/60000)}m ago`;
-        if (diff < 86400000)  return `Today ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`;
-        if (diff < 172800000) return `Yesterday ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`;
-        return d.toLocaleDateString([], {month:'short',day:'numeric'}) +
-               ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-      } catch(e) { return dt; }
-    },
-
-    formatMinutesHuman(mins) {
-      if (!mins || mins === 0) return '';
-      const h = Math.floor(mins / 60);
-      const m = Math.round(mins % 60);
-      if (h === 0) return `That's ${m} minutes of ads muted`;
-      return `That's ${h} hour${h>1?'s':''} ${m > 0 ? m + ' min' : ''} of ads muted`;
-    },
-
-  }; // end admute()
+  };
 }
 </script>
 </body>

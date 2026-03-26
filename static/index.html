@@ -1830,7 +1830,7 @@ input[type=range]{
           <template x-for="(ad, i) in stats?.top_muted_ads || []" :key="i">
             <div class="top-ad-row">
               <span class="top-ad-rank" x-text="i + 1"></span>
-              <div class="top-ad-name" x-text="ad.name"></div>
+              <div class="top-ad-name" x-text="formatAdTitle(ad)"></div>
               <div class="top-ad-bar-wrap">
                 <div class="top-ad-bar-bg">
                   <div class="top-ad-bar-fill"
@@ -1872,7 +1872,7 @@ input[type=range]{
           <template x-for="(e, i) in muteLog" :key="e.id">
             <div class="log-row" :class="e.was_false_positive ? 'fp-row' : ''">
               <div class="log-ad">
-                <div class="log-ad-name" x-text="e.ad_name || ('Ad #' + e.ad_id)"></div>
+                <div class="log-ad-name" x-text="formatAdTitle(e)"></div>
                 <div class="log-meta">
                   <span x-text="e.mute_method?.toUpperCase()"></span>
                   <span x-show="e.confidence_score"> · <span x-text="e.confidence_score"></span></span>
@@ -2491,6 +2491,21 @@ function admute(){
       const id=++this._tid;
       this.toasts.push({id,msg,type});
       setTimeout(()=>{this.toasts=this.toasts.filter(t=>t.id!==id);},3500);
+    },
+
+    /* ── Brand-Killer Formatter ── */
+    formatAdTitle(ad) {
+      if (ad.notes && ad.notes.trim() !== '') return ad.notes;
+      
+      const cat = ad.category && ad.category !== 'Uncategorized' ? ad.category : null;
+      const svc = ad.streaming_service && ad.streaming_service !== 'Unknown' ? ad.streaming_service : null;
+      const id = ad.ad_id || ad.id || ad.name?.replace(/\D/g, '') || ad.ad_name?.replace(/\D/g, '') || '???';
+
+      if (cat && svc) return `${cat} Ad on ${svc}`;
+      if (cat) return `${cat} Ad`;
+      if (svc) return `Commercial on ${svc}`;
+
+      return `Silenced Target #${id}`;
     },
 
     /* ── Formatters ── */

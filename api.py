@@ -744,15 +744,36 @@ async def stats_summary(request: web.Request) -> web.Response:
 
         # Top 5 most muted ads this month
         top_ads = conn.execute(
-            """SELECT ad_name_snapshot, COUNT(*) as cnt
-               FROM mute_log
-               WHERE muted_at >= date('now','start of month')
-               AND was_false_positive = 0
-               AND ad_name_snapshot IS NOT NULL
-               GROUP BY ad_name_snapshot
+            """SELECT m.ad_id, m.ad_name_snapshot, COUNT(*) as cnt,
+                      a.category, a.streaming_service,
+                      (SELECT notes FROM recordings WHERE ad_id = a.id LIMIT 1) as notes
+               FROM mute_log m
+               LEFT JOIN ads a ON m.ad_id = a.id
+               WHERE m.muted_at >= date('now','start of month')
+               AND m.was_false_positive = 0
+               AND m.ad_name_snapshot IS NOT NULL
+               GROUP BY m.ad_name_snapshot, m.ad_id, a.category, a.streaming_service
                ORDER BY cnt DESC
                LIMIT 5"""
         ).fetchall()
+
+    return web.json_response({
+        "minutes_saved_this_month": round(secs / 60.0, 1),
+        "mute_events_this_month":   mute_count,
+        "false_positives_this_month": fp_count,
+        "vault_size":               vault_size,
+        "top_muted_ads": [
+            {
+                "id": r["ad_id"],
+                "name": r["ad_name_snapshot"],
+                "category": r["category"],
+                "streaming_service": r["streaming_service"],
+                "notes": r["notes"],
+                "count": r["cnt"]
+            }
+            for r in top_ads
+        ],
+    })
 
     return web.json_response({
         "minutes_saved_this_month": round(secs / 60.0, 1),
@@ -779,11 +800,15 @@ async def stats_mute_log(request: web.Request) -> web.Response:
             f"SELECT COUNT(*) FROM mute_log {where}"
         ).fetchone()[0]
         rows = conn.execute(
-            f"""SELECT id, ad_id, ad_name_snapshot, muted_at,
-                       unmuted_at, duration_actual, mute_method,
-                       confidence_score, was_false_positive
-                FROM mute_log {where}
-                ORDER BY muted_at DESC
+            f"""SELECT m.id, m.ad_id, m.ad_name_snapshot, m.muted_at,
+                       m.unmuted_at, m.duration_actual, m.mute_method,
+                       m.confidence_score, m.was_false_positive,
+                       a.category, a.streaming_service,
+                       (SELECT notes FROM recordings WHERE ad_id = a.id LIMIT 1) as notes
+                FROM mute_log m
+                LEFT JOIN ads a ON m.ad_id = a.id
+                {where}
+                ORDER BY m.muted_at DESC
                 LIMIT ? OFFSET ?""",
             (limit, offset)
         ).fetchall()
@@ -796,6 +821,9 @@ async def stats_mute_log(request: web.Request) -> web.Response:
             "id":               r["id"],
             "ad_id":            r["ad_id"],
             "ad_name":          r["ad_name_snapshot"],
+            "category":         r["category"],
+            "streaming_service":r["streaming_service"],
+            "notes":            r["notes"],
             "muted_at":         r["muted_at"],
             "unmuted_at":       r["unmuted_at"],
             "duration_actual":  r["duration_actual"],

@@ -329,104 +329,115 @@ body{
 }
 
 /* ── HERO RECORD BUTTON ─────────────────────────────────────── */
+
 .hero-circle-wrap{
   display:flex;
   justify-content:center;
-  padding:8px 0 16px;
+  padding:24px 0 32px; /* Extra breathing room for the giant button */
   position:relative;
 }
 
 .hero-circle{
-  width:180px;height:180px;
+  width:220px;  /* MASSIVE 220px button */
+  height:220px;
   border-radius:50%;
   background:var(--ink1);
-  border:2px solid var(--ink3);
+  border:3px solid var(--ink3);
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
   cursor:pointer;
-  gap:8px;
   position:relative;
-  transition:all .2s;
+  transition:all .3s cubic-bezier(.4,0,.2,1);
   overflow:visible;
 }
 
 .hero-circle:active{transform:scale(.94);}
 
-/* Idle glow ring */
+/* Subtle yellow idle glow */
 .hero-circle::before{
   content:'';
   position:absolute;
-  inset:-4px;
+  inset:-6px;
   border-radius:50%;
-  border:1px solid rgba(204,255,0,.08);
+  border:2px solid rgba(255,230,0,.15);
   animation:idle-breathe 4s ease-in-out infinite;
 }
 
 @keyframes idle-breathe{
-  0%,100%{opacity:.3;transform:scale(1);}
+  0%,100%{opacity:.4;transform:scale(1);}
   50%{opacity:1;transform:scale(1.04);}
 }
 
-/* Active recording state */
+/* Active recording state — NEON YELLOW ALARM */
 .hero-circle.recording{
   background:var(--void);
-  border-color:var(--lime);
+  border-color:#FFE600; /* Vibrant Tech Yellow */
   box-shadow:
-    0 0 0  4px rgba(204,255,0,.08),
-    0 0 0 12px rgba(204,255,0,.04),
-    0 0 0 24px rgba(204,255,0,.02);
+    0 0 0  6px rgba(255,230,0,.1),
+    0 0 0 16px rgba(255,230,0,.05),
+    0 0 0 32px rgba(255,230,0,.02);
   animation:record-pulse 1.2s ease-in-out infinite;
 }
 
 .hero-circle.recording::before{
-  border-color:rgba(204,255,0,.3);
+  border-color:rgba(255,230,0,.4);
   animation:record-ring 1.2s ease-out infinite;
 }
 
 @keyframes record-pulse{
   0%,100%{box-shadow:
-    0 0 0  4px rgba(204,255,0,.08),
-    0 0 0 12px rgba(204,255,0,.04),
-    0 0 0 24px rgba(204,255,0,.02);}
+    0 0 0  6px rgba(255,230,0,.1),
+    0 0 0 16px rgba(255,230,0,.05),
+    0 0 0 32px rgba(255,230,0,.02);}
   50%{box-shadow:
-    0 0 0  6px rgba(204,255,0,.15),
-    0 0 0 20px rgba(204,255,0,.07),
-    0 0 0 36px rgba(204,255,0,.03);}
+    0 0 0  8px rgba(255,230,0,.2),
+    0 0 0 24px rgba(255,230,0,.1),
+    0 0 0 44px rgba(255,230,0,.04);}
 }
 
 @keyframes record-ring{
-  0%{transform:scale(1);opacity:.6;}
-  100%{transform:scale(1.3);opacity:0;}
+  0%{transform:scale(1);opacity:.8;}
+  100%{transform:scale(1.35);opacity:0;}
 }
 
 .hero-icon{
-  width:48px;height:48px;
+  width:64px;   /* Huge mic icon */
+  height:64px;
   flex-shrink:0;
-  transition:color .2s;
+  transition:all .3s;
+  margin-top:-10px; /* Tweaks the visual center */
 }
 
-.hero-circle:not(.recording) .hero-icon{color:var(--t1);}
-.hero-circle.recording .hero-icon{color:var(--lime);}
+/* Make the mic yellow so it screams "action" */
+.hero-circle:not(.recording) .hero-icon{color:#FFE600; opacity: 0.8;}
+.hero-circle.recording .hero-icon{
+  color:#FFE600; 
+  opacity: 1;
+  filter: drop-shadow(0 0 8px rgba(255,230,0,.6));
+}
 
 .hero-label{
-  font-size:10px;
-  font-weight:800;
-  letter-spacing:.12em;
+  font-size:14px;
+  font-weight:900;
+  letter-spacing:.15em;
   text-transform:uppercase;
-  transition:color .2s;
+  transition:color .3s;
+  margin-top:8px;
 }
 
 .hero-circle:not(.recording) .hero-label{color:var(--t2);}
-.hero-circle.recording .hero-label{color:var(--lime);}
+.hero-circle.recording .hero-label{color:#FFE600;}
 
+/* Pinned to the bottom so it doesn't push the mic off-center */
 .hero-timer{
   font-family:var(--font-m);
-  font-size:11px;
-  color:var(--lime);
-  min-height:16px;
-  text-align:center;
+  font-size:14px;
+  font-weight:700;
+  color:#FFE600;
+  position:absolute;
+  bottom:26px; 
 }
 
 /* ── CONTROL BUTTONS ────────────────────────────────────────── */
@@ -1711,8 +1722,8 @@ input[type=range]{
                 <option value="Unknown">Select...</option>
                 <option>Netflix</option><option>Disney+</option>
                 <option>Prime Video</option><option>Apple TV+</option>
-                <option>Crave</option><option>YouTube</option>
-                <option>Cable / Broadcast</option><option>Other</option>
+                <option>Crave</option><option>YouTube</option><option>Sportsnet</option>
+                <option>Cable / Broadcast</option><option>Crunchyroll</option><option>Other</option>
               </select>
             </div>
 
@@ -1720,9 +1731,9 @@ input[type=range]{
               <label class="form-label">Category</label>
               <select class="form-select" x-model="rec.category">
                 <option value="Uncategorized">Select...</option>
-                <option>Auto</option><option>Food & Drink</option>
-                <option>Pharma</option><option>Finance</option>
-                <option>Retail</option><option>Telecom</option><option>Other</option>
+                <option>Cars</option><option>Gambling/Betting</option><option>Food & Drink</option>
+                <option>Pharma</option><option>Finance</option><option>Entertainment/Media</option><option>Tech/Electronics</option>
+                <option>Retail/Packaged goods</option><option>PSA/government</option><option>Travel</option><option>Telecom</option><option>Other</option>
               </select>
             </div>
 

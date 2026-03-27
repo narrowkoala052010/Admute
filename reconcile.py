@@ -62,11 +62,12 @@ def run_reconcile(fix: bool = False, yes: bool = False) -> None:
         rec_dir = BASE / "recordings"
         if rec_dir.exists():
             wav_files = list(rec_dir.glob("*.wav"))
-            known_paths = {
-                Path(row[0]).name for row in
-                conn.execute("SELECT file_path FROM recordings").fetchall()
-            }
-            orphan_wavs = [f for f in wav_files if str(f) not in known_paths]
+            known_paths = set()
+            for row in conn.execute("SELECT file_path FROM recordings").fetchall():
+                if row[0]: # Ensure it's not None
+                    known_paths.add(Path(row[0]).name)
+
+            orphan_wavs = [f for f in wav_files if f.name not in known_paths]
 
             if not orphan_wavs:
                 ok(f"No orphan WAV files found ({len(wav_files)} files checked)")
@@ -89,7 +90,14 @@ def run_reconcile(fix: bool = False, yes: bool = False) -> None:
             "SELECT id, file_path, status FROM recordings WHERE status != 'rejected'"
         ).fetchall()
 
-        dead_rows = [r for r in rows if not Path(r[1]).exists()]
+        dead_rows = []
+        for r in rows:
+            p = Path(r[1])
+            # If the DB path isn't absolute, make it absolute relative to BASE
+            if not p.is_absolute():
+                p = BASE / p
+            if not p.exists():
+                dead_rows.append(r)
 
         if not dead_rows:
             ok(f"All {len(rows)} recording rows have valid files")
@@ -180,11 +188,11 @@ def run_reconcile(fix: bool = False, yes: bool = False) -> None:
             ok("All vault ads have a linked recording row")
         else:
             for a in unlinked:
-                bad(f"Unlinked ad: id={a[0]}  name=\"{a[1]}\"  hashes={a[2]}")
+                bad(f"Unlinked ad: id={a[0]}  name=\"{a[1]}\"  hashes={a[2]} (Source audio deleted, Ad must be purged)")
                 issues.append(f"unlinked_ad:{a[0]}")
                 if fix:
                     fixes.append(("purge_unlinked_ad", a[0]))
-
+                    
         # ── SUMMARY ───────────────────────────────────────────────
         print("─" * 50)
         if not issues:

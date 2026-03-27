@@ -267,6 +267,28 @@ def run(log_level: str = "INFO", log_dir: str = "logs") -> None:
                 }).encode()
                 publisher.send_multipart([TOPIC_STRIKE, payload])
 
+            # ── EXILE CLEANUP ─────────────────────────────────────────
+            # Periodically purge cooldown_map entries for exiled ads.
+            if len(cooldown_map) > 0 and queries_total % 50 == 0:
+                try:
+                    with get_conn() as conn:
+                        active_ids = {
+                            row[0] for row in
+                            conn.execute(
+                                "SELECT id FROM ads WHERE is_active = 1"
+                            ).fetchall()
+                        }
+                    # Remove any cooldown entries for exiled ads
+                    exiled = [k for k in cooldown_map if k not in active_ids]
+                    for k in exiled:
+                        del cooldown_map[k]
+                        log.info(
+                            "🗑 Cleared cooldown for exiled ad_id=%d", k,
+                            extra=_extra(PROC)
+                        )
+                except Exception:
+                    pass
+
             # Heartbeat
             if now - last_heartbeat >= 60.0:
                 log.info(

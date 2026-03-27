@@ -564,13 +564,18 @@ async def delete_recording(request: web.Request) -> web.Response:
     if not row:
         return web.json_response({"error": "Not found"}, status=404)
 
-
-    # Delete WAV file
+    # Delete WAV file from disk
     fp = Path(row["file_path"])
     if fp.exists():
         fp.unlink()
 
     with get_conn() as conn:
+        # NEW: If this recording was ingested into an Ad, kill the Ad and Hashes too
+        if row["ad_id"]:
+            conn.execute("DELETE FROM hashes WHERE ad_id=?", (row["ad_id"],))
+            conn.execute("DELETE FROM ads WHERE id=?", (row["ad_id"],))
+            
+        # Delete the recording row
         conn.execute("DELETE FROM recordings WHERE id=?", (rec_id,))
         conn.commit()
 

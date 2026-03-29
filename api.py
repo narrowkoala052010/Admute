@@ -442,10 +442,12 @@ async def snr_test(request: web.Request) -> web.Response:
 
 async def record_start(request: web.Request) -> web.Response:
     result = await _cmd_audio({"cmd": "start_record"})
+    state_set("is_recording", "1")
     return web.json_response(result)
 
 
 async def record_stop(request: web.Request) -> web.Response:
+    state_set("is_recording", "0")
     result = await _cmd_audio({"cmd": "stop_record"})
     if not result.get("ok"):
         return web.json_response(result, status=500)

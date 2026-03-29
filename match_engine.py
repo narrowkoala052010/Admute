@@ -28,71 +28,9 @@ from bus     import FINGER_PUSH, MATCH_PUB, TOPIC_MATCH, TOPIC_NEAR_MISS, TOPIC_
 from console import (setup_logging, _extra,
                      fmt_match, fmt_near_miss, fmt_strike,
                      fmt_no_candidates, fmt_vault_empty_periodic)
+from matcher import query_vault, time_coherence_score
 
 PROC = "MATCH"
-
-
-def _query_vault(conn: sqlite3.Connection,
-                 hash_values: list[int]) -> list[sqlite3.Row]:
-    """
-    Find all hashes in the vault that match any of our query hashes.
-    Returns rows of (hash_value, time_offset, ad_id, ad_name, duration_seconds).
-    Uses the covering index idx_hashes_covering for performance.
-    """
-    if not hash_values:
-        return []
-
-    placeholders = ",".join("?" * len(hash_values))
-    sql = f"""
-        SELECT  h.hash_value,
-                h.time_offset,
-                h.ad_id,
-                a.name,
-                a.duration_seconds
-        FROM    hashes h
-        JOIN    ads a ON h.ad_id = a.id
-        WHERE   a.is_active = 1
-          AND   h.hash_value IN ({placeholders})
-    """
-    return conn.execute(sql, hash_values).fetchall()
-
-
-def _time_coherence_score(
-        query_map: dict[int, int],
-        db_rows: list[sqlite3.Row],
-) -> dict[int, tuple[int, str, float]]:
-    """
-    For each candidate ad, compute the time-coherence score.
-
-    The score is the height of the tallest bin in a histogram of
-    (db_offset - query_offset) values for matching hashes.
-    A true match produces a sharp spike; noise produces a flat histogram.
-
-    Returns: {ad_id: (score, ad_name, duration_seconds)}
-    """
-    ad_info:   dict[int, tuple[str, float]] = {}
-    ad_deltas: dict[int, list[int]]         = defaultdict(list)
-
-    for row in db_rows:
-        h_val     = row["hash_value"]
-        db_offset = row["time_offset"]
-        ad_id     = row["ad_id"]
-
-        if h_val not in query_map:
-            continue
-
-        delta = db_offset - query_map[h_val]
-        ad_deltas[ad_id].append(delta)
-        ad_info[ad_id] = (row["name"], row["duration_seconds"])
-
-    scores: dict[int, tuple[int, str, float]] = {}
-    for ad_id, deltas in ad_deltas.items():
-        counter = Counter(deltas)
-        peak    = counter.most_common(1)[0][1]
-        name, dur = ad_info[ad_id]
-        scores[ad_id] = (peak, name, dur)
-
-    return scores
 
 
 def _vault_size(conn: sqlite3.Connection) -> int:
@@ -185,7 +123,7 @@ def run(log_level: str = "INFO", log_dir: str = "logs") -> None:
                     continue
 
                 t_query = time.perf_counter()
-                db_rows = _query_vault(conn, hash_list)
+                db_rows = query_vault(conn, hash_list)
                 query_ms = (time.perf_counter() - t_query) * 1000
 
             if not db_rows:
@@ -197,12 +135,12 @@ def run(log_level: str = "INFO", log_dir: str = "logs") -> None:
                 continue
 
             # Score all candidates
-            scores = _time_coherence_score(query_map, db_rows)
+            scores = time_coherence_score(query_map, db_rows)
             if not scores:
                 continue
 
             # Pick the best candidate
-            best_id, (best_score, best_name, best_dur) = max(
+            best_id, (best_score, best_name, best_dur, best_delta) = max(
                 scores.items(), key=lambda kv: kv[1][0]
             )
 
@@ -232,6 +170,7 @@ def run(log_level: str = "INFO", log_dir: str = "logs") -> None:
                     "ad_id":    best_id,
                     "ad_name":  best_name,
                     "duration": best_dur,
+                    "delta":    best_delta,
                     "score":    best_score,
                     "query_ms": round(query_ms, 1),
                     "ts":       now,

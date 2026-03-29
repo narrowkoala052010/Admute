@@ -35,6 +35,7 @@ from db      import get_conn, state_get, state_set, DB_PATH
 from bus     import MUTE_CTRL, AUDIO_CTRL
 from console import setup_logging, _extra
 from fingerprint_worker import generate_hashes, _init_filter, _apply_filter, _normalise_peak
+from matcher import query_vault, time_coherence_score
 
 PROC = "API"
 
@@ -205,13 +206,12 @@ async def _cmd_audio(command: dict) -> dict:
 
 
 # ── FINGERPRINT INGESTION ─────────────────────────────────────────────────────
-
 def _ingest_recording(recording_id: int,
                       cfg, log: logging.Logger) -> dict:
     """
-    Load a WAV recording, run the full fingerprint pipeline,
-    and insert the ad + hashes into the vault.
-    Returns a result dict.
+    V5 Ingestion: Fingerprints the WAV, runs a 5-second pre-check against the vault.
+    If it matches an existing Master Ad, it saves the ad as inactive and flags for review.
+    Otherwise, it ingests as a normal active ad.
     """
     with get_conn() as conn:
         row = conn.execute(
@@ -228,7 +228,6 @@ def _ingest_recording(recording_id: int,
     if not filepath.exists():
         return {"ok": False, "error": f"WAV file not found: {filepath}"}
 
-    # Load WAV
     try:
         with wave.open(str(filepath), 'rb') as wf:
             frames    = wf.readframes(wf.getnframes())
@@ -237,83 +236,84 @@ def _ingest_recording(recording_id: int,
         audio_int = np.frombuffer(frames, dtype=np.int32)
         audio     = audio_int.astype(np.float32) / 2_147_483_647.0
         duration  = len(audio) / framerate
-
     except Exception as e:
         return {"ok": False, "error": f"Failed to read WAV: {e}"}
 
-    # Fingerprint using the SAME rolling window approach as live capture
-    # This ensures stored hashes are directly comparable to live hashes
     _init_filter(cfg.audio.sample_rate)
-
-    chunk_size     = cfg.audio.chunk_size        # 2048
-    window_samples = cfg.audio.sample_rate       # 48000 = 1 second
-    hop_samples    = window_samples // 2         # 50% overlap
+    chunk_size     = cfg.audio.chunk_size
+    window_samples = cfg.audio.sample_rate
+    hop_samples    = window_samples // 2
 
     all_hashes: list[tuple[int, int]] = []
     start = 0
-
     while start + window_samples <= len(audio):
         window = audio[start:start + window_samples].copy()
-
-        # Apply same pipeline as live: filter then normalise
         filtered   = _apply_filter(window)
         normalised = _normalise_peak(filtered, 0.0005)
-
         if normalised is not None:
             window_hashes = generate_hashes(normalised, cfg.fingerprint,
                                             cfg.audio.sample_rate)
             all_hashes.extend(window_hashes)
-
         start += hop_samples
 
     hashes = all_hashes
-
     if len(hashes) < 50:
-        return {"ok": False,
-                "error": f"Only {len(hashes)} hashes generated — "
-                         f"too few to match reliably. Re-record."}
+        return {"ok": False, "error": f"Only {len(hashes)} hashes generated — too few to match reliably."}
 
-    # Write to DB
+    # ── V5 PRE-CHECK (5-Second Window) ──
+    # Take roughly the first ~250 hashes (approx 5 seconds of dense audio)
+    query_map = {int(h): int(off) for h, off in hashes[:250]}
+    hash_list = list(query_map.keys())
+
+    best_parent_id = None
+    best_parent_name = None
+
+    with get_conn() as conn:
+        db_rows = query_vault(conn, hash_list)
+        scores = time_coherence_score(query_map, db_rows)
+
+        if scores:
+            best_id, (best_score, best_name, best_dur, best_delta) = max(
+                scores.items(), key=lambda kv: kv[1][0]
+            )
+            # Require at least the live confidence threshold, or 40% of the query hashes (very strict math)
+            required_score = max(cfg.match.confidence_threshold, int(len(query_map) * 0.40))
+            
+            if best_score >= required_score:
+                best_parent_id = best_id
+                best_parent_name = best_name
+                log.info("🔗 Pre-check matched \"%s\" (Score: %d/%d). Flagging for review.", 
+                         best_name, best_score, required_score, extra=_extra(PROC))
+
+    # ── WRITE TO DB ──
     try:
         with get_conn() as conn:
-            # Create the ad record
-            name = (row["streaming_service"] or "Unknown") + \
-                   " Ad " + str(int(time.time()))[-4:]
+            name = (row["streaming_service"] or "Unknown") + " Ad " + str(int(time.time()))[-4:]
+            
+            # If we found a parent, the ad starts INACTIVE until manually reviewed
+            is_active = 0 if best_parent_id else 1
 
             conn.execute(
                 """INSERT INTO ads
-                   (name, duration_seconds, streaming_service,
-                    category, source, hash_count)
-                   VALUES (?,?,?,?,?,?)""",
-                (name, round(duration, 2),
-                 row["streaming_service"] or "Unknown",
-                 row["category"]          or "Uncategorized",
-                 "mic",
-                 len(hashes))
+                   (name, duration_seconds, streaming_service, category, source, hash_count, is_active, parent_ad_id)
+                   VALUES (?,?,?,?,?,?,?,?)""",
+                (name, round(duration, 2), row["streaming_service"] or "Unknown",
+                 row["category"] or "Uncategorized", "mic", len(hashes),
+                 is_active, best_parent_id)
             )
-            ad_id = conn.execute(
-                "SELECT last_insert_rowid()"
-            ).fetchone()[0]
+            ad_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
 
-            # Bulk insert hashes
             conn.executemany(
-                "INSERT INTO hashes (hash_value, time_offset, ad_id) "
-                "VALUES (?,?,?)",
+                "INSERT INTO hashes (hash_value, time_offset, ad_id) VALUES (?,?,?)",
                 [(h, off, ad_id) for h, off in hashes]
             )
 
-            # Update recording status
+            rec_status = "pending_review" if best_parent_id else "ingested"
             conn.execute(
-                "UPDATE recordings SET status='ingested', ad_id=? "
-                "WHERE id=?",
-                (ad_id, recording_id)
+                "UPDATE recordings SET status=?, ad_id=?, pending_link_ad_id=? WHERE id=?",
+                (rec_status, ad_id, best_parent_id, recording_id)
             )
             conn.commit()
-
-        log.info("Ingested recording %d → ad_id=%d  hashes=%d  "
-                 "duration=%.1fs",
-                 recording_id, ad_id, len(hashes), duration,
-                 extra=_extra(PROC))
 
         return {
             "ok":         True,
@@ -321,11 +321,11 @@ def _ingest_recording(recording_id: int,
             "hash_count": len(hashes),
             "duration":   round(duration, 2),
             "name":       name,
+            "status":     rec_status,
+            "parent":     best_parent_name
         }
-
     except sqlite3.Error as e:
         return {"ok": False, "error": f"DB error: {e}"}
-
 
 # ── ROUTE HANDLERS ────────────────────────────────────────────────────────────
 
@@ -477,46 +477,50 @@ async def record_stop(request: web.Request) -> web.Response:
 async def list_recordings(request: web.Request) -> web.Response:
     with get_conn() as conn:
         rows = conn.execute(
-            """SELECT id, ad_id, file_path, duration_seconds,
-                      status, streaming_service, category,
-                      notes, recorded_at
-               FROM recordings
-               ORDER BY recorded_at DESC"""
+            """SELECT r.id, r.ad_id, r.file_path, r.duration_seconds,
+                      r.status, r.streaming_service, r.category,
+                      r.notes, r.recorded_at, r.pending_link_ad_id,
+                      a.name as parent_name
+               FROM recordings r
+               LEFT JOIN ads a ON r.pending_link_ad_id = a.id
+               ORDER BY r.recorded_at DESC"""
         ).fetchall()
 
     return web.json_response([{
-        "id":                r["id"],
-        "ad_id":             r["ad_id"],
-        "filename":          Path(r["file_path"]).name,
-        "duration_seconds":  r["duration_seconds"],
-        "status":            r["status"],
-        "streaming_service": r["streaming_service"],
-        "category":          r["category"],
-        "notes":             r["notes"],
-        "recorded_at":       r["recorded_at"],
+        "id":                 r["id"],
+        "ad_id":              r["ad_id"],
+        "filename":           Path(r["file_path"]).name,
+        "duration_seconds":   r["duration_seconds"],
+        "status":             r["status"],
+        "streaming_service":  r["streaming_service"],
+        "category":           r["category"],
+        "notes":              r["notes"],
+        "recorded_at":        r["recorded_at"],
+        "pending_link_ad_id": r["pending_link_ad_id"],
+        "parent_name":        r["parent_name"],
     } for r in rows])
 
-
-async def get_recording_audio(request: web.Request) -> web.Response:
+async def review_accept(request: web.Request) -> web.Response:
     rec_id = int(request.match_info["id"])
     with get_conn() as conn:
-        row = conn.execute(
-            "SELECT file_path FROM recordings WHERE id=?", (rec_id,)
-        ).fetchone()
+        conn.execute("UPDATE recordings SET status='ingested' WHERE id=?", (rec_id,))
+        conn.execute(
+            "UPDATE ads SET is_active=1 WHERE id = (SELECT ad_id FROM recordings WHERE id=?)",
+            (rec_id,)
+        )
+        conn.commit()
+    return web.json_response({"ok": True})
 
-    if not row:
-        return web.json_response({"error": "Not found"}, status=404)
-
-    filepath = Path(row["file_path"])
-    if not filepath.exists():
-        return web.json_response({"error": "File missing"}, status=404)
-
-    return web.FileResponse(
-        filepath,
-        headers={"Content-Type": "audio/wav",
-                 "Content-Disposition": f"inline; filename={filepath.name}"}
-    )
-
+async def review_reject(request: web.Request) -> web.Response:
+    rec_id = int(request.match_info["id"])
+    with get_conn() as conn:
+        conn.execute("UPDATE recordings SET status='ingested', pending_link_ad_id=NULL WHERE id=?", (rec_id,))
+        conn.execute(
+            "UPDATE ads SET is_active=1, parent_ad_id=NULL WHERE id = (SELECT ad_id FROM recordings WHERE id=?)",
+            (rec_id,)
+        )
+        conn.commit()
+    return web.json_response({"ok": True})
 
 async def update_recording(request: web.Request) -> web.Response:
     rec_id = int(request.match_info["id"])
@@ -552,6 +556,25 @@ async def ingest_recording(request: web.Request) -> web.Response:
     status = 200 if result["ok"] else 422
     return web.json_response(result, status=status)
 
+async def get_recording_audio(request: web.Request) -> web.Response:
+    rec_id = int(request.match_info["id"])
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT file_path FROM recordings WHERE id=?", (rec_id,)
+        ).fetchone()
+
+    if not row:
+        return web.json_response({"error": "Not found"}, status=404)
+
+    filepath = Path(row["file_path"])
+    if not filepath.exists():
+        return web.json_response({"error": "File missing"}, status=404)
+
+    return web.FileResponse(
+        filepath,
+        headers={"Content-Type": "audio/wav",
+                 "Content-Disposition": f"inline; filename={filepath.name}"}
+    )
 
 async def delete_recording(request: web.Request) -> web.Response:
     rec_id = int(request.match_info["id"])
@@ -890,6 +913,8 @@ def create_app(cfg, log: logging.Logger,
     app.router.add_get ("/api/recordings/{id}/audio",     get_recording_audio)
     app.router.add_route("PATCH",  "/api/recordings/{id}", update_recording)
     app.router.add_post("/api/recordings/{id}/ingest",    ingest_recording)
+    app.router.add_post("/api/recordings/{id}/link/accept", review_accept)
+    app.router.add_post("/api/recordings/{id}/link/reject", review_reject)
     app.router.add_route("DELETE", "/api/recordings/{id}", delete_recording)
 
     app.router.add_get ("/api/ads",                       list_ads)
@@ -913,7 +938,7 @@ def create_app(cfg, log: logging.Logger,
         "/api/ads/{id}/deactivate", "/api/ads/{id}/purge",
         "/api/ads/{id}/audio",
         "/api/stats/summary", "/api/stats/mute-log",
-        "/api/stats/snr-history",
+        "/api/stats/snr-history","/api/recordings/{id}/link/accept", "/api/recordings/{id}/link/reject",
     ]:
         app.router.add_route("OPTIONS", path,
                              lambda r: web.Response(status=200))

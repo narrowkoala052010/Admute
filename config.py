@@ -39,6 +39,7 @@ class MatchConfig:
     cooldown_seconds:     float
     strike_min:           int
     near_miss_ratio:      float
+    auto_link_threshold:  float
 
 
 @dataclass
@@ -49,6 +50,7 @@ class MuteConfig:
     ir_remote_name:        str
     ir_key_mute:           str
     cec_port:              int
+    sonar_ping_ms:         int
 
 
 @dataclass
@@ -112,6 +114,7 @@ def load_config(path: Path = CONFIG_PATH) -> Config:
                 cooldown_seconds     = float(m["cooldown_seconds"]),
                 strike_min           = int(m["strike_min"]),
                 near_miss_ratio      = float(m["near_miss_ratio"]),
+                auto_link_threshold  = float(m.get("auto_link_threshold", 0.85)), # NEW
             ),
             mute=MuteConfig(
                 backend               = str(mu["backend"]),
@@ -120,6 +123,7 @@ def load_config(path: Path = CONFIG_PATH) -> Config:
                 ir_remote_name        = str(mu["ir_remote_name"]),
                 ir_key_mute           = str(mu["ir_key_mute"]),
                 cec_port              = int(mu.get("cec_port", 1)),
+                sonar_ping_ms         = int(mu.get("sonar_ping_ms", 250)), # NEW
             ),
             api=ApiConfig(
                 port      = int(ap["port"]),

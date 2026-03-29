@@ -12,6 +12,8 @@ env/
 *.egg-info/
 dist/
 build/
+find_variants.py
+reconcile.py
 
 # AdMute Data
 admute.db

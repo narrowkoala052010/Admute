@@ -71,6 +71,15 @@ class MuteController:
                  duration: float, delta: int, score: int, trace_id: str) -> None:
         """Called when MatchEngine fires a confident match."""
         with self._lock:
+            # ── THE RECORDING SHIELD ──
+            # Check the DB state. If the API says we are recording, stand down.
+            if state_get("is_recording") == "1":
+                self.log.info(
+                    "Shield active: Ignoring match for '%s' to preserve recording.",
+                    ad_name, extra=_extra(PROC, trace_id)
+                )
+                return
+
             now = time.time()
 
             # Debounce — ignore if we just acted on a match

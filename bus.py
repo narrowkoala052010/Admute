@@ -5,21 +5,21 @@ Single source of truth for all inter-process socket addresses.
 
 # P1 AudioCapture  →  P2 FingerprintWorker
 # Pattern: PUSH / PULL  (load-balanced across worker count)
-AUDIO_PUSH = "tcp://127.0.0.1:5570"
+AUDIO_PUSH = "tcp://127.0.0.1:5580"
 
 # P2 FingerprintWorker  →  P3 MatchEngine
 # Pattern: PUSH / PULL
-FINGER_PUSH = "tcp://127.0.0.1:5571"
+FINGER_PUSH = "tcp://127.0.0.1:5581"
 
 # P3 MatchEngine  →  P4 MuteController
 # Pattern: PUB / SUB  (broadcast; future-proof for multiple consumers)
-MATCH_PUB = "tcp://127.0.0.1:5572"
+MATCH_PUB = "tcp://127.0.0.1:5582"
 
 # P5 LocalAPI  →  P4 MuteController  (commands: mute, unmute, false-positive)
-MUTE_CTRL = "tcp://127.0.0.1:5573"
+MUTE_CTRL = "tcp://127.0.0.1:5583"
 
 # P5 LocalAPI  →  P1 AudioCapture  (commands: start_record, stop_record, snr_test)
-AUDIO_CTRL = "tcp://127.0.0.1:5574"
+AUDIO_CTRL = "tcp://127.0.0.1:5584"
 
 # ── TOPIC CONSTANTS ───────────────────────────────────────────
 # Published on MATCH_PUB, consumed by MuteController

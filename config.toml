@@ -1,15 +1,13 @@
 # ============================================================
-# AdMute v4 — Master Configuration
-# All tunable parameters live here.
-# Edit this file; run POST /api/config/reload to apply
-# without restarting the daemon (except [audio] changes).
+# AdMute v6 (Sentient Sandbox) — Master Configuration
+# API runs on port 5001 to prevent colliding with production.
 # ============================================================
 
 [audio]
 sample_rate       = 48000
 chunk_size        = 2048
 channels          = 2           # I2S INMP441 is stereo on Pi
-device_name = "googlevoicehat"
+device_name       = "googlevoicehat"
 silence_threshold = 0.001       # chunks below this RMS are discarded
 buffer_seconds    = 1.0         # rolling capture window
 
@@ -22,11 +20,13 @@ fan_value         = 15          # hash pairs per anchor peak
 max_time_delta    = 200         # max frame gap between hash pairs
 
 [match]
-confidence_threshold = 25      # time-coherence score to declare a match
+confidence_threshold = 25       # time-coherence score to declare a match
 cooldown_seconds     = 35       # suppress re-match of same ad within window
-strike_min           = 8       # minimum score worth logging as a strike
+strike_min           = 8        # minimum score worth logging as a strike
 near_miss_ratio      = 0.75     # score >= this% of threshold = near miss
-auto_link_threshold = 0.85 # NEW: 85% match needed to propose a family link
+auto_link_threshold  = 0.85     # 85% match needed to propose a family link
+markov_ttl_seconds   = 300.0    # Flush prediction RAM cache after 5 mins silence
+enable_telemetry     = true     # Inject trace_id into logs for distributed debugging
 
 [mute]
 backend                = "ir"   # "ir" | "cec"
@@ -35,13 +35,13 @@ debounce_ms            = 250    # ignore duplicate match events within window
 ir_remote_name         = "hisense"
 ir_key_mute            = "KEY_MUTE"
 cec_port               = 1      # HDMI port number for CEC (1-indexed)
-sonar_ping_ms = 250 # NEW: The duration of the micro-unmute for variant checking
+sonar_ping_ms          = 250    # The duration of the micro-unmute for variant checking
 
 [api]
-port             = 5000
+port             = 5001
 log_level        = "INFO"       # DEBUG | INFO | WARNING | ERROR
 
 [paths]
-db             = "admute.db"
-recordings_dir = "recordings"
-log_dir        = "logs"
+db               = "admute.db"
+recordings_dir   = "recordings"
+log_dir          = "logs"

@@ -2228,7 +2228,7 @@ function admute(){
     async testConnection(){
       this.setupTesting=true;
       try{
-        const r=await fetch(`http://${this.setupAddress}:5000/api/health`);
+        const r=await fetch(`http://${this.setupAddress}:5001/api/health`);
         if(r.ok){this.piAddress=this.setupAddress;this.setupStep=2;}
         else this.toast('Could not reach Pi','error');
       }catch(e){this.toast('Connection failed — check IP','error');}
@@ -2244,7 +2244,7 @@ function admute(){
     },
 
     /* ── API ── */
-    apiUrl(p){return `http://${this.piAddress}:5000${p}`;},
+    apiUrl(p){return `http://${this.piAddress}:5001${p}`;},
 
     async api(method,path,body=null){
       const bs=body?JSON.stringify(body):'';

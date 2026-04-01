@@ -1,11 +1,7 @@
-# Python
+# ── PYTHON ────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *$py.class
-venvmute/
-venv/
-.env
-env/
 *.pyo
 *.pyd
 .Python
@@ -13,26 +9,39 @@ env/
 dist/
 build/
 
-# AdMute Data
+# ── ENVIRONMENTS ──────────────────────────────────────────
+venvmute/
+venv/
+env/
+.env
+.venv/
+
+# ── ADMUTE DATA (THE PRIVATE VAULT) ───────────────────────
+# We publish the logic, but we KEEP the data. 
+# This is your competitive moat.
+*.db
+*.db-shm
+*.db-wal
 admute.db
-admute.db-shm
-admute.db-wal
-logs/
 recordings/
 fingerprints/
+logs/
+*.wav
 
-# OS Files
+# ── CONFIGURATION ─────────────────────────────────────────
+# We ignore the actual config but usually keep a template.
+config.toml
+# Note: You should create a 'config.toml.example' that IS tracked.
+
+# ── IDE & OS ──────────────────────────────────────────────
+.vscode/
+.idea/
+*.iml
 .DS_Store
 Thumbs.db
 *.swp
 *.swo
- 
-# ── IDE ───────────────────────────────────────────────────
-.vscode/
-.idea/
-*.iml
- 
-# ── Secrets ───────────────────────────────────────────────
-# The API secret is stored in admute.db (already ignored above)
-# Never add secrets to config.toml and commit it
- 
+
+# ── SCRIPTS ───────────────────────────────────────────────
+# REMOVED: find_variants.py, reconcile.py, golden_hash.py
+# These MUST be tracked to establish Prior Art on GitHub.

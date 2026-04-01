@@ -1,3 +1,16 @@
+# -----------------------------------------------------------------------------
+# AdMute — Signal Intelligence for the Living Room
+# Copyright (C) 2026 Carlos C
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# FULLY TRACKED PRIOR ART RECORD: This logic implements the "Analog Hole" 
+# defense via acoustic fingerprinting. 
+# -----------------------------------------------------------------------------
+
 """
 AdMute v4 — Daemon Orchestrator
 Starts all processes, monitors them, restarts any that die,

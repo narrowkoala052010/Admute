@@ -1,10 +1,7 @@
 """
-AdMute v4 — Process 4: MuteController
-Subscribes to match events, debounces them, fires
-the IR mute command via irsend (or CEC), and manages
-the unmute timer based on stored ad duration.
-
-Also handles false positive commands from the LocalAPI.
+AdMute v6 — Process 4: MuteController
+Calculates absolute unmute timing using STFT delta offsets.
+Listens for Match Engine ZMQ broadcasts and executes IR/CEC.
 """
 
 import os
@@ -16,7 +13,6 @@ import sqlite3
 import threading
 import subprocess
 import zmq
-import threading
 from pathlib import Path
 
 BASE = os.path.dirname(os.path.abspath(__file__))
@@ -49,6 +45,10 @@ class MuteController:
         self._unmute_timer: threading.Timer | None = None
         self._last_match_ts   = 0.0
 
+        # Pre-calculate the exact duration of a single STFT frame in seconds
+        hop_samples = self.cfg.fingerprint.nperseg * (1.0 - self.cfg.fingerprint.noverlap_ratio)
+        self.stft_frame_duration = hop_samples / float(self.cfg.audio.sample_rate)
+
     # ── PUBLIC API ─────────────────────────────────────────────
 
     @property
@@ -68,9 +68,18 @@ class MuteController:
             }
 
     def on_match(self, ad_id: int, ad_name: str,
-                 duration: float, score: int) -> None:
+                 duration: float, delta: int, score: int, trace_id: str) -> None:
         """Called when MatchEngine fires a confident match."""
         with self._lock:
+            # ── THE RECORDING SHIELD ──
+            # Check the DB state. If the API says we are recording, stand down.
+            if state_get("is_recording") == "1":
+                self.log.info(
+                    "Shield active: Ignoring match for '%s' to preserve recording.",
+                    ad_name, extra=_extra(PROC, trace_id)
+                )
+                return
+
             now = time.time()
 
             # Debounce — ignore if we just acted on a match
@@ -84,30 +93,41 @@ class MuteController:
             # Different ad interrupted — cancel existing timer
             if self._muted:
                 self._cancel_timer()
-                self._do_unmute_command(reason="interrupted by new ad")
+                self._do_unmute_command(reason="interrupted by new ad", trace_id=trace_id)
 
             self._last_match_ts   = now
             self._current_ad_id   = ad_id
             self._current_ad_name = ad_name
             self._mute_start      = now
 
-            self._do_mute_command()
+            self._do_mute_command(trace_id=trace_id)
             self._muted = True
 
-            # Schedule unmute
-            delay = max(0.5, duration - self.cfg.mute.safety_margin_seconds)
-            self._unmute_timer = threading.Timer(delay, self._on_timer_fire,
-                                                 args=(ad_id,))
+            # ── THE V6 ABSOLUTE TIMELINE MATH ──
+            # Calculate exactly how many seconds into the commercial we are
+            elapsed_seconds = delta * self.stft_frame_duration
+            
+            # The remaining time is the total duration minus the elapsed time and safety margin
+            calculated_delay = duration - elapsed_seconds - self.cfg.mute.safety_margin_seconds
+            
+            # Ensure we don't set a negative timer if the ad is already technically over
+            actual_delay = max(0.2, calculated_delay)
+
+            self.log.info(
+                "Timeline Math: duration=%.1fs | elapsed=%.1fs | delay=%.1fs",
+                duration, elapsed_seconds, actual_delay,
+                extra=_extra(PROC, trace_id)
+            )
+
+            self._unmute_timer = threading.Timer(actual_delay, self._on_timer_fire,
+                                                 args=(ad_id, trace_id))
             self._unmute_timer.daemon = True
             self._unmute_timer.start()
 
         state_set("mic_active", "1")  # ensure mic stays active during mute
 
     def on_false_positive(self) -> tuple[int | None, str, float]:
-        """
-        Called when the user hits the false positive button.
-        Returns (ad_id, ad_name, actual_duration_seconds) for logging.
-        """
+        """Called when the user hits the false positive button."""
         with self._lock:
             if not self._muted:
                 return None, "", 0.0
@@ -126,7 +146,7 @@ class MuteController:
         return ad_id, ad_name, duration
 
     def manual_toggle(self) -> bool:
-        """Manual mute/unmute from the UI. Returns new muted state."""
+        """Manual mute/unmute from the UI."""
         with self._lock:
             if self._muted:
                 self._cancel_timer()
@@ -139,7 +159,7 @@ class MuteController:
 
     # ── INTERNAL ───────────────────────────────────────────────
 
-    def _on_timer_fire(self, ad_id: int) -> None:
+    def _on_timer_fire(self, ad_id: int, trace_id: str) -> None:
         """Called by the unmute timer thread."""
         with self._lock:
             if not self._muted or self._current_ad_id != ad_id:
@@ -148,26 +168,23 @@ class MuteController:
             actual = time.time() - self._mute_start
             self.log.info(
                 fmt_unmute_sent(actual, self._current_ad_name),
-                extra=_extra(PROC)
+                extra=_extra(PROC, trace_id)
             )
-            self._do_unmute_command(reason="timer")
+            self._do_unmute_command(reason="timer", trace_id=trace_id)
             self._muted = False
 
             ad_name_snap = self._current_ad_name
             self._current_ad_id   = None
             self._current_ad_name = ""
 
-        self._log_mute_event(ad_id, ad_name_snap, actual,
-                             was_false_positive=False)
+        self._log_mute_event(ad_id, ad_name_snap, actual, was_false_positive=False)
 
     def _cancel_timer(self) -> None:
-        """Cancel any pending unmute timer. Call with _lock held."""
         if self._unmute_timer and self._unmute_timer.is_alive():
             self._unmute_timer.cancel()
         self._unmute_timer = None
 
-    def _do_mute_command(self) -> None:
-        """Fire the mute command via the configured backend."""
+    def _do_mute_command(self, trace_id: str = None) -> None:
         backend = self.cfg.mute.backend
         try:
             if backend == "ir":
@@ -176,35 +193,28 @@ class MuteController:
                     self.cfg.mute.ir_remote_name,
                     self.cfg.mute.ir_key_mute,
                 ]
-                detail = (f"remote={self.cfg.mute.ir_remote_name}  "
-                          f"key={self.cfg.mute.ir_key_mute}")
-            else:  # cec
+                detail = f"remote={self.cfg.mute.ir_remote_name}  key={self.cfg.mute.ir_key_mute}"
+            else:
                 cmd = ["cec-client", "-s", "-d", "1"]
                 detail = f"CEC port={self.cfg.mute.cec_port}"
 
-            subprocess.run(cmd, check=True, timeout=2,
-                           capture_output=True)
+            subprocess.run(cmd, check=True, timeout=2, capture_output=True)
             self.log.info(
-                fmt_mute_sent(backend, detail,
-                              self._current_ad_name,
-                              0),   # duration shown in on_match
-                extra=_extra(PROC)
+                fmt_mute_sent(backend, detail, self._current_ad_name, 0),
+                extra=_extra(PROC, trace_id)
             )
         except subprocess.CalledProcessError as exc:
             self.log.error("Mute command failed (exit %d): %s",
                            exc.returncode, exc.stderr.decode(errors="replace"),
-                           extra=_extra(PROC))
+                           extra=_extra(PROC, trace_id))
         except subprocess.TimeoutExpired:
-            self.log.error("Mute command timed out", extra=_extra(PROC))
+            self.log.error("Mute command timed out", extra=_extra(PROC, trace_id))
         except FileNotFoundError:
-            self.log.error(
-                "irsend not found — is LIRC installed and configured?",
-                extra=_extra(PROC)
-            )
+            self.log.error("irsend not found — is LIRC installed and configured?",
+                           extra=_extra(PROC, trace_id))
 
-    def _do_unmute_command(self, reason: str = "") -> None:
-        """Fire the unmute command. Same key toggles the TV mute."""
-        self._do_mute_command()   # toggle — same key
+    def _do_unmute_command(self, reason: str = "", trace_id: str = None) -> None:
+        self._do_mute_command(trace_id=trace_id)
 
     def _log_mute_event(self, ad_id: int, ad_name: str,
                         actual_duration: float,
@@ -222,11 +232,9 @@ class MuteController:
                 )
                 conn.commit()
         except sqlite3.Error as exc:
-            self.log.error("DB error logging mute event: %s", exc,
-                           extra=_extra(PROC))
+            self.log.error("DB error logging mute event: %s", exc, extra=_extra(PROC))
 
     def get_status(self) -> dict:
-        """Return current state as a dict for the API."""
         with self._lock:
             return {
                 "is_muted":         self._muted,
@@ -234,9 +242,10 @@ class MuteController:
                 "current_ad_name":  self._current_ad_name,
                 "mute_start":       self._mute_start if self._muted else None,
             }
+
 # ── PROCESS ENTRY POINT ───────────────────────────────────────
 
-_controller: MuteController | None = None   # module-level for API access
+_controller: MuteController | None = None
 
 
 def get_controller() -> MuteController | None:
@@ -251,7 +260,6 @@ def run(log_level: str = "INFO", log_dir: str = "logs") -> None:
 
     _controller = MuteController(cfg, log)
 
-    # Start command server thread — handles API requests
     cmd_thread = threading.Thread(
         target=_command_server,
         args=(_controller, log),
@@ -297,19 +305,17 @@ def run(log_level: str = "INFO", log_dir: str = "logs") -> None:
                     ad_id    = data["ad_id"],
                     ad_name  = data["ad_name"],
                     duration = data["duration"],
+                    delta    = data["delta"],
                     score    = data["score"],
+                    trace_id = data.get("trace_id", "SYS")
                 )
-
-            # NEAR_MISS and STRIKE are logged by MatchEngine;
-            # MuteController only acts on confirmed matches.
 
         except zmq.ZMQError as exc:
             if running:
                 log.error("ZMQ error: %s", exc, extra=_extra(PROC))
             break
         except Exception as exc:
-            log.error("Unexpected: %s", exc, extra=_extra(PROC),
-                      exc_info=True)
+            log.error("Unexpected: %s", exc, extra=_extra(PROC), exc_info=True)
             time.sleep(0.1)
 
     sub.close()
@@ -317,18 +323,12 @@ def run(log_level: str = "INFO", log_dir: str = "logs") -> None:
     log.info("Stopped", extra=_extra(PROC))
 
 def _command_server(controller, log) -> None:
-    """
-    ZMQ REP server that handles commands from the LocalAPI.
-    Runs in a daemon thread inside the MuteController process.
-    Commands: mute_toggle | false_positive | status
-    """
     import zmq
     ctx = zmq.Context()
     rep = ctx.socket(zmq.REP)
     rep.bind(MUTE_CTRL)
 
-    log.info("Command server ready on %s", MUTE_CTRL,
-             extra=_extra(PROC))
+    log.info("Command server ready on %s", MUTE_CTRL, extra=_extra(PROC))
 
     while True:
         try:
@@ -339,13 +339,10 @@ def _command_server(controller, log) -> None:
 
             if cmd == "mute_toggle":
                 new_state = controller.manual_toggle()
-                rep.send_string(json.dumps({
-                    "ok": True, "is_muted": new_state
-                }))
+                rep.send_string(json.dumps({"ok": True, "is_muted": new_state}))
 
             elif cmd == "false_positive":
                 ad_id, ad_name, duration = controller.on_false_positive()
-                # Log to DB
                 if ad_id:
                     try:
                         with get_conn() as conn:
@@ -355,34 +352,19 @@ def _command_server(controller, log) -> None:
                                     duration_actual, mute_method,
                                     was_false_positive)
                                    VALUES (?,?,CURRENT_TIMESTAMP,?,?,1)""",
-                                (ad_id, ad_name,
-                                 round(duration, 2),
-                                 controller.cfg.mute.backend)
+                                (ad_id, ad_name, round(duration, 2), controller.cfg.mute.backend)
                             )
-                            # Mark ad for review
-                            conn.execute(
-                                "UPDATE ads SET is_active=0 WHERE id=?",
-                                (ad_id,)
-                            )
+                            conn.execute("UPDATE ads SET is_active=0 WHERE id=?", (ad_id,))
                             conn.commit()
                     except Exception as e:
-                        log.error("DB error on false positive: %s", e,
-                                  extra=_extra(PROC))
-                rep.send_string(json.dumps({
-                    "ok":      True,
-                    "ad_id":   ad_id,
-                    "ad_name": ad_name,
-                }))
+                        log.error("DB error on false positive: %s", e, extra=_extra(PROC))
+                rep.send_string(json.dumps({"ok": True, "ad_id": ad_id, "ad_name": ad_name}))
 
             elif cmd == "status":
-                rep.send_string(json.dumps({
-                    "ok": True, **controller.get_status()
-                }))
+                rep.send_string(json.dumps({"ok": True, **controller.get_status()}))
 
             else:
-                rep.send_string(json.dumps({
-                    "ok": False, "error": f"unknown command: {cmd}"
-                }))
+                rep.send_string(json.dumps({"ok": False, "error": f"unknown command: {cmd}"}))
 
         except Exception as exc:
             log.error("Command server error: %s", exc, extra=_extra(PROC))

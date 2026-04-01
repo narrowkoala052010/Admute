@@ -1,10 +1,7 @@
 """
-AdMute v4 — Database Manager
+AdMute v6 — Database Manager
 Handles initialisation, migrations, and provides a
 thread-safe connection factory.
-
-Usage:
-    python db.py          # run migrations and verify schema
 """
 
 import os
@@ -116,11 +113,11 @@ def _parse_version(filename: str) -> int:
 
 EXPECTED_TABLES = {
     "schema_version", "ads", "hashes", "recordings",
-    "mute_log", "snr_log", "device_state"
+    "mute_log", "snr_log", "device_state", "markov_transitions"
 }
 
 EXPECTED_INDEXES = {
-    "idx_hashes_covering", "idx_hashes_ad_id"
+    "idx_hashes_covering", "idx_hashes_ad_id", "idx_markov_source"
 }
 
 
@@ -194,7 +191,7 @@ if __name__ == "__main__":
 
     print()
     print("═" * 55)
-    print("  AdMute v4 — Database Initialisation")
+    print("  AdMute v6 — Database Initialisation")
     print(f"  DB path : {DB_PATH}")
     print(f"  Migrations: {MIGRATIONS}")
     print("═" * 55)

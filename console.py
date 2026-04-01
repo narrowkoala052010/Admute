@@ -1,10 +1,6 @@
 """
-AdMute v4 — Console Feedback Engine
-Rich ANSI terminal output. Every meaningful daemon event
-gets a distinct visual treatment so you can read the radar
-at a glance from across the room.
-
-No external dependencies — pure ANSI escape codes.
+AdMute v6 — Console Feedback Engine
+Rich ANSI terminal output with distributed telemetry tracking.
 """
 
 import time
@@ -40,7 +36,7 @@ BG_YELLOW = "\033[43m"
 class AdMuteFormatter(logging.Formatter):
     """
     Custom log formatter that colour-codes by process name and level.
-    Attach to a StreamHandler for terminal output.
+    Injects [trace_id] if present for distributed debugging.
     """
 
     PROC_COLOURS = {
@@ -56,10 +52,16 @@ class AdMuteFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         ts    = time.strftime("%H:%M:%S")
         proc  = getattr(record, "proc", "SYS")
+        trace = getattr(record, "trace_id", None)
+        
         color = self.PROC_COLOURS.get(proc, WHITE)
         tag   = f"{color}[{proc:<6}]{RESET}"
+        
+        # Telemetry trace injection
+        trace_tag = f"{DIM}[{trace}]{RESET} " if trace else ""
+        
         msg   = record.getMessage()
-        return f"{DIM}{ts}{RESET}  {tag}  {msg}"
+        return f"{DIM}{ts}{RESET}  {tag}  {trace_tag}{msg}"
 
 
 def setup_logging(proc_name: str, log_level: str = "INFO",
@@ -98,8 +100,12 @@ def setup_logging(proc_name: str, log_level: str = "INFO",
     return logger
 
 
-def _extra(proc: str) -> dict:
-    return {"proc": proc}
+def _extra(proc: str, trace_id: str = None) -> dict:
+    """Helper to inject process name and optional trace ID into log records."""
+    d = {"proc": proc}
+    if trace_id:
+        d["trace_id"] = trace_id
+    return d
 
 
 # ── VISUAL PRIMITIVES ─────────────────────────────────────────
@@ -133,7 +139,6 @@ def snr_bar(snr_db: float, width: int = 8) -> str:
 
 
 # ── FEEDBACK FORMATTERS ───────────────────────────────────────
-# These return formatted strings that callers pass to logger.info()
 
 def fmt_audio_heartbeat(peak: float, snr_db: float,
                         chunks_total: int) -> str:
@@ -204,5 +209,5 @@ def fmt_no_candidates(vault_size: int) -> str:
 
 def fmt_vault_empty_periodic() -> str:
     return (f"{YELLOW}⚠  Vault is empty.{RESET}  "
-            f"Open the web UI at http://<pi-ip>:5000 "
+            f"Open the web UI at http://<pi-ip>:5001 "
             f"and record your first ad.")

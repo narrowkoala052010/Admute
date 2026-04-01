@@ -178,6 +178,7 @@ body{
   letter-spacing:0.1em;
   text-transform:uppercase;
   transition:color .2s;
+  position:relative;
 }
 
 .nav-item.active{color:var(--lime);}
@@ -191,6 +192,21 @@ body{
   transition:opacity .2s;
 }
 .nav-item.active .nav-dot{opacity:1;}
+
+.nav-badge {
+  position:absolute;
+  top:4px;
+  right:calc(50% - 22px);
+  background:var(--red);
+  color:var(--void);
+  font-family:var(--font-m);
+  font-size:9px;
+  font-weight:800;
+  padding:1px 5px;
+  border-radius:10px;
+  pointer-events:none;
+  box-shadow:0 2px 4px rgba(0,0,0,.5);
+}
 
 /* ── STATUS HERO ────────────────────────────────────────────── */
 .status-hero{
@@ -329,16 +345,15 @@ body{
 }
 
 /* ── HERO RECORD BUTTON ─────────────────────────────────────── */
-
 .hero-circle-wrap{
   display:flex;
   justify-content:center;
-  padding:24px 0 32px; /* Extra breathing room for the giant button */
+  padding:24px 0 32px;
   position:relative;
 }
 
 .hero-circle{
-  width:220px;  /* MASSIVE 220px button */
+  width:220px;
   height:220px;
   border-radius:50%;
   background:var(--ink1);
@@ -355,7 +370,6 @@ body{
 
 .hero-circle:active{transform:scale(.94);}
 
-/* Subtle yellow idle glow */
 .hero-circle::before{
   content:'';
   position:absolute;
@@ -370,10 +384,9 @@ body{
   50%{opacity:1;transform:scale(1.04);}
 }
 
-/* Active recording state — NEON YELLOW ALARM */
 .hero-circle.recording{
   background:var(--void);
-  border-color:#FFE600; /* Vibrant Tech Yellow */
+  border-color:#FFE600;
   box-shadow:
     0 0 0  6px rgba(255,230,0,.1),
     0 0 0 16px rgba(255,230,0,.05),
@@ -403,14 +416,13 @@ body{
 }
 
 .hero-icon{
-  width:64px;   /* Huge mic icon */
+  width:64px;
   height:64px;
   flex-shrink:0;
   transition:all .3s;
-  margin-top:-10px; /* Tweaks the visual center */
+  margin-top:-10px;
 }
 
-/* Make the mic yellow so it screams "action" */
 .hero-circle:not(.recording) .hero-icon{color:#FFE600; opacity: 0.8;}
 .hero-circle.recording .hero-icon{
   color:#FFE600; 
@@ -430,7 +442,6 @@ body{
 .hero-circle:not(.recording) .hero-label{color:var(--t2);}
 .hero-circle.recording .hero-label{color:#FFE600;}
 
-/* Pinned to the bottom so it doesn't push the mic off-center */
 .hero-timer{
   font-family:var(--font-m);
   font-size:14px;
@@ -476,7 +487,6 @@ body{
   background:var(--red-dim);
 }
 
-/* False Positive — full width, only when muted */
 .fp-tile{
   grid-column:1/-1;
   height:64px;
@@ -590,7 +600,6 @@ body{
   text-align:right;
 }
 
-/* SNR colors */
 .snr-pass .snr-bar-fill,.snr-pass .snr-val{background:var(--lime);color:var(--lime);}
 .snr-warn .snr-bar-fill,.snr-warn .snr-val{background:var(--amber);color:var(--amber);}
 .snr-fail .snr-bar-fill,.snr-fail .snr-val{background:var(--red);color:var(--red);}
@@ -602,7 +611,6 @@ body{
   margin:14px 0;
 }
 
-/* Hero bento tile — full width */
 .bento-hero{
   background:var(--ink0);
   border:1px solid rgba(204,255,0,.15);
@@ -656,7 +664,6 @@ body{
   margin-top:8px;
 }
 
-/* 3-column row */
 .bento-row{
   display:grid;
   grid-template-columns:1fr 1fr 1fr;
@@ -705,174 +712,72 @@ body{
   border-bottom:1px solid var(--ink2);
 }
 
-/* ── TOP ADS BARS ───────────────────────────────────────────── */
-.top-ads-card{
+/* ── REVIEW CARDS ───────────────────────────────────────────── */
+.review-card{
   background:var(--ink0);
-  border:1px solid var(--ink2);
+  border:1px solid rgba(204,255,0,.2);
   border-radius:var(--r);
+  margin-bottom:12px;
   overflow:hidden;
 }
 
-.top-ad-row{
-  display:flex;
-  align-items:center;
-  gap:12px;
+.review-hdr{
+  background:rgba(204,255,0,.04);
   padding:12px 14px;
-  border-bottom:1px solid var(--ink2);
-}
-.top-ad-row:last-child{border-bottom:none;}
-
-.top-ad-rank{
-  font-family:var(--font-m);
-  font-size:10px;
-  color:var(--t2);
-  width:14px;
-  flex-shrink:0;
-}
-
-.top-ad-name{
-  flex:1;
-  min-width:0;
-  font-size:13px;
-  font-weight:700;
-  letter-spacing:.02em;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-
-.top-ad-bar-wrap{width:70px;flex-shrink:0;}
-
-.top-ad-bar-bg{
-  height:3px;
-  background:var(--ink3);
-  border-radius:2px;
-  overflow:hidden;
-}
-
-.top-ad-bar-fill{
-  height:100%;
-  background:var(--lime);
-  border-radius:2px;
-  box-shadow:0 0 6px rgba(204,255,0,.4);
-  transition:width .8s cubic-bezier(.4,0,.2,1);
-}
-
-.top-ad-count{
-  font-family:var(--font-m);
-  font-size:10px;
-  color:var(--lime);
-  text-align:right;
-  margin-top:3px;
-}
-
-/* ── MUTE LOG ───────────────────────────────────────────────── */
-.log-card{
-  background:var(--ink0);
-  border:1px solid var(--ink2);
-  border-radius:var(--r);
-  overflow:hidden;
-}
-
-.log-row{
+  border-bottom:1px solid rgba(204,255,0,.1);
   display:flex;
   align-items:center;
   gap:10px;
-  padding:11px 14px;
-  border-bottom:1px solid var(--ink2);
 }
-.log-row:last-child{border-bottom:none;}
-.log-row.fp-row{background:rgba(255,59,48,.04);}
 
-.log-ad{flex:1;min-width:0;}
-
-.log-ad-name{
+.review-hdr-title{
   font-size:13px;
-  font-weight:700;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
+  font-weight:800;
+  color:var(--lime);
+  letter-spacing:.05em;
+  text-transform:uppercase;
 }
 
-.log-meta{
-  font-family:var(--font-m);
-  font-size:9px;
-  color:var(--t2);
-  margin-top:2px;
+.review-body{padding:14px;}
+
+.vs-row{
   display:flex;
   align-items:center;
-  gap:6px;
+  gap:10px;
+  margin-bottom:14px;
 }
 
-.exile-badge{
-  font-size:8px;
-  font-weight:700;
-  letter-spacing:.05em;
-  color:var(--red);
-  background:var(--red-dim);
-  border:1px solid rgba(255,59,48,.2);
-  padding:2px 5px;
-  border-radius:3px;
-}
-
-.log-right{text-align:right;flex-shrink:0;}
-
-.log-dur{
-  font-family:var(--font-m);
-  font-size:12px;
-  color:var(--t0);
-}
-
-.log-time{
-  font-family:var(--font-m);
-  font-size:9px;
-  color:var(--t2);
-  margin-top:2px;
-}
-
-.load-more{
-  width:100%;
-  height:44px;
-  background:var(--void);
+.vs-col{
+  flex:1;
+  background:var(--ink1);
   border:1px solid var(--ink2);
   border-radius:var(--r-sm);
-  color:var(--t1);
-  font-family:var(--font-d);
-  font-size:11px;
+  padding:10px;
+  min-width:0;
+}
+
+.vs-lbl{
+  font-size:9px;
   font-weight:800;
-  letter-spacing:.1em;
+  color:var(--t2);
   text-transform:uppercase;
-  cursor:pointer;
-  margin-top:10px;
-  transition:background .15s;
+  letter-spacing:.1em;
+  margin-bottom:4px;
 }
-.load-more:active{background:var(--ink1);}
 
-/* ── SNR HISTORY ────────────────────────────────────────────── */
-.snr-hist-card{
-  background:var(--ink0);
-  border:1px solid var(--ink2);
-  border-radius:var(--r);
+.vs-val{
+  font-size:13px;
+  font-weight:700;
+  white-space:nowrap;
   overflow:hidden;
+  text-overflow:ellipsis;
 }
 
-.snr-hist-row{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:10px 14px;
-  border-bottom:1px solid var(--ink2);
+.vs-divider{
+  font-size:10px;
+  font-weight:900;
+  color:var(--t2);
 }
-.snr-hist-row:last-child{border-bottom:none;}
-
-.snr-hist-dot{
-  width:7px;height:7px;
-  border-radius:50%;
-  flex-shrink:0;
-}
-.snr-hist-dot.pass{background:var(--lime);box-shadow:0 0 4px var(--lime);}
-.snr-hist-dot.warn{background:var(--amber);}
-.snr-hist-dot.fail{background:var(--red);}
 
 /* ── RECORDINGS ─────────────────────────────────────────────── */
 .rec-cards-wrap{padding:14px 0;}
@@ -956,7 +861,6 @@ audio{
   accent-color:var(--lime);
 }
 
-/* Form elements */
 .form-group{margin-bottom:10px;}
 
 .form-label{
@@ -999,7 +903,6 @@ audio{
 
 .form-textarea{resize:none;height:64px;}
 
-/* Action buttons */
 .btn-row{display:flex;gap:8px;margin-top:12px;}
 
 .btn{
@@ -1040,7 +943,6 @@ audio{
   color:var(--red);
 }
 
-/* 2-step delete confirm */
 .delete-confirm{
   background:var(--red-dim);
   border:1px solid rgba(255,59,48,.2);
@@ -1466,11 +1368,51 @@ input[type=range]{
   background:var(--red-dim);
 }
 
+/* Lists */
+.top-ads-card, .log-card, .snr-hist-card{
+  background:var(--ink0);
+  border:1px solid var(--ink2);
+  border-radius:var(--r);
+  overflow:hidden;
+}
+
+.top-ad-row, .log-row, .snr-hist-row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:12px 14px;
+  border-bottom:1px solid var(--ink2);
+}
+.top-ad-row:last-child, .log-row:last-child, .snr-hist-row:last-child{border-bottom:none;}
+
+.top-ad-rank{font-family:var(--font-m);font-size:10px;color:var(--t2);width:14px;flex-shrink:0;}
+.top-ad-name{flex:1;min-width:0;font-size:13px;font-weight:700;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.top-ad-bar-wrap{width:70px;flex-shrink:0;}
+.top-ad-bar-bg{height:3px;background:var(--ink3);border-radius:2px;overflow:hidden;}
+.top-ad-bar-fill{height:100%;background:var(--lime);border-radius:2px;box-shadow:0 0 6px rgba(204,255,0,.4);transition:width .8s cubic-bezier(.4,0,.2,1);}
+.top-ad-count{font-family:var(--font-m);font-size:10px;color:var(--lime);text-align:right;margin-top:3px;}
+
+.log-row.fp-row{background:rgba(255,59,48,.04);}
+.log-ad{flex:1;min-width:0;}
+.log-ad-name{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.log-meta{font-family:var(--font-m);font-size:9px;color:var(--t2);margin-top:2px;display:flex;align-items:center;gap:6px;}
+.exile-badge{font-size:8px;font-weight:700;letter-spacing:.05em;color:var(--red);background:var(--red-dim);border:1px solid rgba(255,59,48,.2);padding:2px 5px;border-radius:3px;}
+.log-right{text-align:right;flex-shrink:0;}
+.log-dur{font-family:var(--font-m);font-size:12px;color:var(--t0);}
+.log-time{font-family:var(--font-m);font-size:9px;color:var(--t2);margin-top:2px;}
+
+.load-more{width:100%;height:44px;background:var(--void);border:1px solid var(--ink2);border-radius:var(--r-sm);color:var(--t1);font-family:var(--font-d);font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;margin-top:10px;transition:background .15s;}
+.load-more:active{background:var(--ink1);}
+
+.snr-hist-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.snr-hist-dot.pass{background:var(--lime);box-shadow:0 0 4px var(--lime);}
+.snr-hist-dot.warn{background:var(--amber);}
+.snr-hist-dot.fail{background:var(--red);}
+
 </style>
 </head>
 <body x-data="admute()" x-init="init()" x-cloak>
 
-<!-- ── SETUP ──────────────────────────────────────────────────── -->
 <div class="setup-screen" x-show="!isSetup" x-transition.opacity>
   <div class="setup-logo">Ad<em>Mute</em></div>
   <p class="setup-tag">signal intelligence for your living room</p>
@@ -1482,7 +1424,6 @@ input[type=range]{
       <div class="setup-dot" :class="setupStep >= 3 ? 'active' : ''"></div>
     </div>
 
-    <!-- Step 1 -->
     <div x-show="setupStep === 1">
       <div class="setup-step-title">Find your Pi</div>
       <p class="setup-step-sub">Enter the IP address of your Raspberry Pi.</p>
@@ -1499,7 +1440,6 @@ input[type=range]{
       </button>
     </div>
 
-    <!-- Step 2 -->
     <div x-show="setupStep === 2">
       <div class="setup-step-title">Enter your secret</div>
       <p class="setup-step-sub">Paste the API secret printed when daemon.py first started.</p>
@@ -1513,7 +1453,6 @@ input[type=range]{
       </button>
     </div>
 
-    <!-- Step 3 -->
     <div x-show="setupStep === 3">
       <div class="setup-step-title">Mic placement</div>
       <p class="setup-step-sub">Test signal quality with the TV on at normal volume.</p>
@@ -1547,14 +1486,12 @@ input[type=range]{
   </div>
 </div>
 
-<!-- ── MAIN APP ────────────────────────────────────────────────── -->
 <div id="app" x-show="isSetup" x-transition.opacity>
 
   <div class="offline-bar" x-show="!isOnline">
     ⚠ Cannot reach AdMute — check Wi-Fi
   </div>
 
-  <!-- Header -->
   <div class="hdr">
     <div class="wordmark">Ad<em>Mute</em></div>
     <div class="hdr-right">
@@ -1571,13 +1508,10 @@ input[type=range]{
     </div>
   </div>
 
-  <!-- Scroll area -->
   <div class="scroll-area">
 
-    <!-- ── CONTROL VIEW ──────────────────────────────────────── -->
     <div x-show="view === 'control'">
 
-      <!-- Status hero -->
       <div class="status-hero"
            :class="!micActive ? 'mic-off' : isMuted ? 'muted' : 'listening'">
         <div class="status-row">
@@ -1608,7 +1542,6 @@ input[type=range]{
         </div>
       </div>
 
-      <!-- Hero record circle -->
       <div class="hero-circle-wrap">
         <div class="hero-circle" :class="isRecording ? 'recording' : ''"
              @click="toggleRecord()" :style="!micActive ? 'opacity:.4;pointer-events:none' : ''">
@@ -1625,7 +1558,6 @@ input[type=range]{
         </div>
       </div>
 
-      <!-- Mute toggle + False Positive grid -->
       <div class="ctrl-grid">
         <div class="ctrl-tile" :class="isMuted ? 'muted-state' : ''" @click="toggleMute()">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1648,7 +1580,6 @@ input[type=range]{
           <div class="toggle" :class="micActive ? 'on' : ''" @click="toggleMic()"></div>
         </div>
 
-        <!-- False Positive — full width, only when muted -->
         <div class="fp-tile" x-show="isMuted" x-transition @click="falsePositive()">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:18px;height:18px;">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
@@ -1657,7 +1588,6 @@ input[type=range]{
         </div>
       </div>
 
-      <!-- SNR strip -->
       <div class="snr-strip"
            :class="snrClass === 'pass' ? 'snr-pass' : snrClass === 'warn' ? 'snr-warn' : snrClass === 'fail' ? 'snr-fail' : ''"
            @click="openSnrModal()">
@@ -1671,16 +1601,63 @@ input[type=range]{
         </svg>
       </div>
 
-    </div><!-- /control -->
-
-    <!-- ── RECORDINGS VIEW ───────────────────────────────────── -->
-    <div x-show="view === 'recordings'">
+    </div><div x-show="view === 'review'">
       <div style="display:flex;align-items:center;justify-content:space-between;margin:14px 0 12px;">
-        <div style="font-size:20px;font-weight:900;letter-spacing:.03em;text-transform:uppercase;">Recordings</div>
-        <div style="font-family:var(--font-m);font-size:11px;color:var(--t2);" x-text="recordings.length + ' total'"></div>
+        <div style="font-size:20px;font-weight:900;letter-spacing:.03em;text-transform:uppercase;">Variant Links</div>
+        <div style="font-family:var(--font-m);font-size:11px;color:var(--t2);" x-text="pendingReviewsCount + ' pending'"></div>
       </div>
 
-      <div class="empty" x-show="recordings.length === 0">
+      <div class="empty" x-show="pendingReviewsCount === 0">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <h3>All Caught Up</h3>
+        <p>No variants pending review.</p>
+      </div>
+
+      <template x-for="rec in pendingReviews" :key="rec.id">
+        <div class="review-card">
+          <div class="review-hdr">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:18px;height:18px;color:var(--lime);">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+            </svg>
+            <div class="review-hdr-title">Variant Detected</div>
+          </div>
+          <div class="review-body">
+            <div class="vs-row">
+              <div class="vs-col">
+                <div class="vs-lbl">Master Ad</div>
+                <div class="vs-val" x-text="rec.parent_name || 'Unknown Ad'"></div>
+              </div>
+              <div class="vs-divider">VS</div>
+              <div class="vs-col" style="border-color: rgba(204,255,0,.3);">
+                <div class="vs-lbl">New Capture</div>
+                <div class="vs-val"><span x-text="formatDur(rec.duration_seconds)"></span> · <span x-text="rec.streaming_service && rec.streaming_service !== 'Unknown' ? rec.streaming_service : 'Live'"></span></div>
+              </div>
+            </div>
+            
+            <audio controls :src="apiUrl('/api/recordings/'+rec.id+'/audio')" style="margin-top:0;margin-bottom:14px;height:36px;width:100%;"></audio>
+            
+            <div class="btn-row">
+              <button class="btn btn-ghost" @click="rejectLink(rec)" :disabled="linkingId === rec.id">
+                <span x-show="linkingId === rec.id"><div class="spin"></div></span>
+                <span x-show="linkingId !== rec.id">Keep Separate</span>
+              </button>
+              <button class="btn btn-lime" @click="acceptLink(rec)" :disabled="linkingId === rec.id">
+                <span x-show="linkingId === rec.id"><div class="spin"></div></span>
+                <span x-show="linkingId !== rec.id">Link as Child</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div><div x-show="view === 'recordings'">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:14px 0 12px;">
+        <div style="font-size:20px;font-weight:900;letter-spacing:.03em;text-transform:uppercase;">Recordings</div>
+        <div style="font-family:var(--font-m);font-size:11px;color:var(--t2);" x-text="standardRecordings.length + ' total'"></div>
+      </div>
+
+      <div class="empty" x-show="standardRecordings.length === 0">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
         </svg>
@@ -1688,7 +1665,7 @@ input[type=range]{
         <p>Go to Control and tap<br><strong>Record</strong> during a commercial break.</p>
       </div>
 
-      <template x-for="rec in recordings" :key="rec.id">
+      <template x-for="rec in standardRecordings" :key="rec.id">
         <div class="rec-card" :class="expandedRec === rec.id ? 'expanded' : ''">
           <div class="rec-header" @click="toggleRec(rec.id)">
             <canvas class="rec-waveform" :id="'wv-'+rec.id" width="136" height="68"></canvas>
@@ -1696,8 +1673,7 @@ input[type=range]{
               <div class="rec-pills">
                 <span :class="'pill pill-' + rec.status"
                       x-text="rec.status === 'pending_review' ? 'Pending' : rec.status === 'ingested' ? 'Ingested' : 'Rejected'"></span>
-                <span class="vault-badge" :class="rec.status === 'ingested' ? 'vault-active' : ''"
-                      x-show="rec.status === 'ingested'">● Active</span>
+                <span class="vault-badge vault-active" x-show="rec.status === 'ingested'">● Active</span>
               </div>
               <div class="rec-meta">
                 <span class="rec-dur" x-text="formatDur(rec.duration_seconds)"></span>
@@ -1757,9 +1733,9 @@ input[type=range]{
                       :disabled="ingestingId === rec.id"
                       @click="ingestRecording(rec)">
                 <span x-show="ingestingId === rec.id"><div class="spin"></div></span>
-                <span x-text="ingestingId === rec.id ? 'Fingerprinting...' : 'INGEST NOW'"></span>
+                <span x-text="ingestingId === rec.id ? 'Analyzing...' : 'INGEST NOW'"></span>
               </button>
-              <p class="ingest-hint">Adds fingerprint to vault. Detection starts immediately.</p>
+              <p class="ingest-hint">System will check for variants before activating.</p>
             </div>
 
             <div x-show="rec.status === 'ingested'"
@@ -1794,12 +1770,8 @@ input[type=range]{
           </div>
         </div>
       </template>
-    </div><!-- /recordings -->
+    </div><div x-show="view === 'stats'">
 
-    <!-- ── STATS VIEW ────────────────────────────────────────── -->
-    <div x-show="view === 'stats'">
-
-      <!-- Bento hero -->
       <div class="bento-hero" style="margin-top:14px;">
         <div class="bento-eyebrow">This Month</div>
         <div class="bento-num" x-text="stats ? stats.minutes_saved_this_month.toFixed(1) : '—'"></div>
@@ -1807,7 +1779,6 @@ input[type=range]{
         <div class="bento-sub" x-text="stats ? formatMinHuman(stats.minutes_saved_this_month) : ''"></div>
       </div>
 
-      <!-- 3-tile row -->
       <div class="bento-row" style="margin-top:10px;">
         <div class="bento-tile">
           <div class="bento-tile-num" style="color:var(--lime);" x-text="stats?.mute_events_this_month ?? '—'"></div>
@@ -1823,7 +1794,6 @@ input[type=range]{
         </div>
       </div>
 
-      <!-- Top muted ads -->
       <div x-show="stats?.top_muted_ads?.length > 0">
         <div class="sec-title">Top Muted Ads</div>
         <div class="top-ads-card">
@@ -1843,7 +1813,6 @@ input[type=range]{
         </div>
       </div>
 
-      <!-- SNR history -->
       <div x-show="snrHistory.length > 0">
         <div class="sec-title">Placement History</div>
         <div class="snr-hist-card">
@@ -1865,7 +1834,6 @@ input[type=range]{
         </div>
       </div>
 
-      <!-- Mute log -->
       <div x-show="muteLog.length > 0">
         <div class="sec-title">Mute Log</div>
         <div class="log-card">
@@ -1892,12 +1860,7 @@ input[type=range]{
       </div>
 
       <div style="height:16px;"></div>
-    </div><!-- /stats -->
-
-  </div><!-- /scroll-area -->
-
-  <!-- Bottom Nav -->
-  <div class="nav">
+    </div></div><div class="nav">
     <div class="nav-item" :class="view === 'control' ? 'active' : ''" @click="switchView('control')">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
@@ -1905,6 +1868,16 @@ input[type=range]{
       Control
       <div class="nav-dot"></div>
     </div>
+    
+    <div class="nav-item" :class="view === 'review' ? 'active' : ''" @click="switchView('review')">
+      <div class="nav-badge" x-show="pendingReviewsCount > 0" x-text="pendingReviewsCount"></div>
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+      </svg>
+      Review
+      <div class="nav-dot"></div>
+    </div>
+
     <div class="nav-item" :class="view === 'recordings' ? 'active' : ''" @click="switchView('recordings')">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
@@ -1912,6 +1885,7 @@ input[type=range]{
       Recordings
       <div class="nav-dot"></div>
     </div>
+
     <div class="nav-item" :class="view === 'stats' ? 'active' : ''" @click="switchView('stats')">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
@@ -1921,10 +1895,7 @@ input[type=range]{
     </div>
   </div>
 
-</div><!-- /app -->
-
-<!-- ── SETTINGS ────────────────────────────────────────────────── -->
-<div class="settings-panel" :class="showSettings ? 'open' : ''">
+</div><div class="settings-panel" :class="showSettings ? 'open' : ''">
   <div class="settings-hdr">
     <div class="settings-title">Settings</div>
     <div class="icon-btn" @click="showSettings = false">
@@ -2016,7 +1987,6 @@ input[type=range]{
   </div>
 </div>
 
-<!-- ── SNR MODAL ───────────────────────────────────────────────── -->
 <div class="modal-overlay" x-show="showSnrModal" x-transition.opacity @click.self="showSnrModal=false">
   <div class="modal-sheet" @click.stop>
     <div class="modal-handle"></div>
@@ -2052,7 +2022,6 @@ input[type=range]{
   </div>
 </div>
 
-<!-- ── TOASTS ──────────────────────────────────────────────────── -->
 <div class="toast-zone">
   <template x-for="t in toasts" :key="t.id">
     <div class="toast" :class="t.type">
@@ -2070,9 +2039,7 @@ input[type=range]{
   </template>
 </div>
 
-<!-- ── JS ─────────────────────────────────────────────────────── -->
 <script>
-/* ── Pure JS HMAC-SHA256 (HTTP safe — no crypto.subtle needed) ── */
 /* ── Pure JS HMAC-SHA256 (HTTP safe — no crypto.subtle needed) ── */
 function sha256(msg){
   function rr(v,a){return(v>>>a)|(v<<(32-a));}
@@ -2088,7 +2055,6 @@ function sha256(msg){
     }
   }
   
-  // THE FIX: Calculate the length BEFORE adding padding zeros!
   const abl = msg.length * 8; 
   
   msg+='\x80';
@@ -2202,6 +2168,7 @@ function admute(){
     ingestingId:null,
     deletingId:null,
     deleteConfirmId:null,
+    linkingId:null,
 
     stats:null,
     muteLog:[],
@@ -2221,6 +2188,18 @@ function admute(){
     toasts:[],
     _tid:0,
 
+    get pendingReviews() {
+        // Only show in Review tab IF it has a proposed parent
+        return this.recordings.filter(r => r.status === 'pending_review' && r.pending_link_ad_id);
+    },
+    get pendingReviewsCount() {
+        return this.pendingReviews.length;
+    },
+    get standardRecordings() {
+        // Show in Recordings tab if active, OR if it's brand new and hasn't been sniffed yet
+        return this.recordings.filter(r => r.status !== 'pending_review' || !r.pending_link_ad_id);
+    },
+
     /* ── Init ── */
     init(){
       const s=localStorage.getItem('admute_cfg');
@@ -2233,6 +2212,7 @@ function admute(){
             this.isSetup=true;
             this.startPolling();
             this.loadConfig();
+            this.loadRecordings(); 
           }
         }catch(e){}
       }
@@ -2248,7 +2228,7 @@ function admute(){
     async testConnection(){
       this.setupTesting=true;
       try{
-        const r=await fetch(`http://${this.setupAddress}:5000/api/health`);
+        const r=await fetch(`http://${this.setupAddress}:5001/api/health`);
         if(r.ok){this.piAddress=this.setupAddress;this.setupStep=2;}
         else this.toast('Could not reach Pi','error');
       }catch(e){this.toast('Connection failed — check IP','error');}
@@ -2260,10 +2240,11 @@ function admute(){
       this.isSetup=true;
       this.startPolling();
       await this.loadConfig();
+      this.loadRecordings();
     },
 
     /* ── API ── */
-    apiUrl(p){return `http://${this.piAddress}:5000${p}`;},
+    apiUrl(p){return `http://${this.piAddress}:5001${p}`;},
 
     async api(method,path,body=null){
       const bs=body?JSON.stringify(body):'';
@@ -2347,8 +2328,8 @@ function admute(){
         try{
           const r=await this.api('POST','/api/record/stop');
           if(r.ok){
-            this.toast('Saved — go to Recordings to ingest','success');
-            if(this.view==='recordings')this.loadRecordings();
+            this.toast('Saved — go to Recordings to add notes & ingest','success');
+            if(this.view==='recordings' || this.view==='review') this.loadRecordings();
           }else this.toast(r.error||'Recording failed','error');
         }catch(e){this.toast('Stop failed','error');}
         this.recordingSeconds=0;
@@ -2363,14 +2344,16 @@ function admute(){
       }
     },
 
-    /* ── Recordings ── */
+    /* ── Recordings & Reviews ── */
     async loadRecordings(){
       try{
         const d=await this.api('GET','/api/recordings');
         this.recordings=d;
         this.$nextTick(()=>d.forEach(r=>{
-          const c=document.getElementById('wv-'+r.id);
-          if(c)drawWave(c,this.apiUrl('/api/recordings/'+r.id+'/audio'));
+          if(r.status !== 'pending_review' || !r.pending_link_ad_id){
+            const c=document.getElementById('wv-'+r.id);
+            if(c)drawWave(c,this.apiUrl('/api/recordings/'+r.id+'/audio'));
+          }
         }));
       }catch(e){this.toast('Could not load recordings','error');}
     },
@@ -2399,12 +2382,42 @@ function admute(){
       try{
         const r=await this.api('POST',`/api/recordings/${rec.id}/ingest`);
         if(r.ok){
-          rec.status='ingested';
-          this.toast(`Added to vault — ${r.hash_count} hashes · ${r.duration}s`,'success');
-          this.vaultSize++;
+          if(r.status === 'pending_review'){
+             this.toast('Variant link detected — moved to Review tab', 'info');
+          } else {
+             this.toast(`Added to vault — ${r.hash_count} hashes · ${r.duration}s`,'success');
+             this.vaultSize++;
+          }
+          this.loadRecordings();
         }else this.toast(r.error||'Ingest failed','error');
       }catch(e){this.toast('Ingest failed','error');}
       this.ingestingId=null;
+    },
+
+    async acceptLink(rec){
+      this.linkingId=rec.id;
+      try{
+        const r=await this.api('POST',`/api/recordings/${rec.id}/link/accept`);
+        if(r.ok){
+          this.toast('Linked as child to Master Ad','success');
+          this.loadRecordings();
+          this.vaultSize++;
+        }else this.toast(r.error||'Link failed','error');
+      }catch(e){this.toast('Link failed','error');}
+      this.linkingId=null;
+    },
+
+    async rejectLink(rec){
+      this.linkingId=rec.id;
+      try{
+        const r=await this.api('POST',`/api/recordings/${rec.id}/link/reject`);
+        if(r.ok){
+          this.toast('Ingested as standalone Ad','info');
+          this.loadRecordings();
+          this.vaultSize++;
+        }else this.toast(r.error||'Reject failed','error');
+      }catch(e){this.toast('Reject failed','error');}
+      this.linkingId=null;
     },
 
     async deleteRecording(rec){
@@ -2482,7 +2495,7 @@ function admute(){
     /* ── View switching ── */
     switchView(v){
       this.view=v;
-      if(v==='recordings')this.loadRecordings();
+      if(v==='recordings' || v==='review')this.loadRecordings();
       if(v==='stats')this.loadStats();
     },
 

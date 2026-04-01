@@ -12,14 +12,9 @@
 # -----------------------------------------------------------------------------
 
 """
-AdMute v4 — Process 2: FingerprintWorker
-Pulls 2-second audio windows from AudioCapture,
-applies the full fingerprint pipeline, and pushes
-hash lists to the MatchEngine.
-
-Two instances of this process run in parallel (daemon.py
-starts them both). Each is an independent process with
-its own ZMQ socket — ZMQ PUSH/PULL handles load balancing.
+AdMute v6 — Process 2: FingerprintWorker
+Pulls audio windows, applies fingerprint pipeline, and
+relays telemetry IDs to the MatchEngine.
 """
 
 import os
@@ -44,7 +39,6 @@ PROC = "FINGER"
 
 
 # ── FILTER CACHE ──────────────────────────────────────────────
-# Compute once at process start; never inside the hot loop.
 _butter_b: np.ndarray | None = None
 _butter_a: np.ndarray | None = None
 
@@ -60,16 +54,11 @@ def _init_filter(sample_rate: int) -> None:
 
 
 def _apply_filter(mono: np.ndarray) -> np.ndarray:
-    """Apply pre-computed bandpass filter in-place."""
     return lfilter(_butter_b, _butter_a, mono)
 
 
 def _normalise_peak(audio: np.ndarray,
                     silence_gate: float = 0.001) -> np.ndarray | None:
-    """
-    Peak-normalise audio. Returns None if signal is too quiet
-    to fingerprint reliably.
-    """
     peak = np.max(np.abs(audio))
     if peak < silence_gate:
         return None
@@ -79,11 +68,6 @@ def _normalise_peak(audio: np.ndarray,
 def generate_hashes(audio: np.ndarray,
                     cfg: FingerprintConfig,
                     sample_rate: int) -> list[tuple[int, int]]:
-    """
-    Core fingerprinting pipeline.
-    Returns list of (hash_value, time_offset) tuples.
-    hash_value is a 32-bit int encoding (freq1, freq2, delta_t).
-    """
     pre_peak = np.max(np.abs(audio))
     if pre_peak > 0:
         audio = audio / pre_peak
@@ -97,22 +81,18 @@ def generate_hashes(audio: np.ndarray,
         noverlap=noverlap,
     )
 
-    # Log-power spectrogram
     spec = 10.0 * np.log10(np.abs(stft) + 1e-10)
 
-    # Peak mask: local maxima above the Nth percentile
     threshold  = np.percentile(spec, cfg.peak_percentile)
     local_max  = maximum_filter(spec, size=cfg.max_filter_size)
     peak_mask  = (spec >= threshold) & (spec == local_max)
 
-    # Extract (time_idx, freq_idx) pairs — note spectrogram is freq×time
     freq_idx, time_idx = np.where(peak_mask)
     peaks = list(zip(time_idx.tolist(), freq_idx.tolist()))
 
     if not peaks:
         return []
 
-    # Combinatorial hashing — anchor + fan target pairs
     hashes: list[tuple[int, int]] = []
     n = len(peaks)
 
@@ -125,7 +105,6 @@ def generate_hashes(audio: np.ndarray,
             delta_t = t2 - t1
             if delta_t < 0 or delta_t > cfg.max_time_delta:
                 continue
-            # Pack into 32-bit int:  f1[9] | f2[9] << 9 | delta_t[14] << 18
             f1q = (f1 // 2) * 2
             f2q = (f2 // 2) * 2
             h = (f1q & 0x1FF) | ((f2q & 0x1FF) << 9) | ((delta_t & 0x3FFF) << 18)
@@ -158,7 +137,6 @@ def run(worker_id: int = 0,
     total_ms       = 0.0
     last_heartbeat = time.time()
 
-    # ── Graceful shutdown ─────────────────────────────────────
     running = True
     def _stop(sig, frame):
         nonlocal running
@@ -171,7 +149,6 @@ def run(worker_id: int = 0,
 
     while running:
         try:
-            # 500ms timeout so we can check the running flag
             if not receiver.poll(timeout=500):
                 continue
 
@@ -183,10 +160,12 @@ def run(worker_id: int = 0,
             meta_bytes, audio_bytes = parts
             meta  = json.loads(meta_bytes)
             audio = np.frombuffer(audio_bytes, dtype=np.float32).copy()
+            
+            # EXTRACT TELEMETRY TRACE
+            trace_id = meta.get("trace_id")
 
             t_start = time.perf_counter()
 
-            # Pipeline
             filtered    = _apply_filter(audio)
             normalised  = _normalise_peak(filtered, cfg.audio.silence_threshold)
 
@@ -204,10 +183,12 @@ def run(worker_id: int = 0,
 
             if not hashes:
                 log.debug("No hashes generated for this window",
-                          extra=_extra(PROC))
+                          extra=_extra(PROC, trace_id))
                 continue
 
+            # FORWARD TELEMETRY TO MATCH ENGINE
             result_meta = json.dumps({
+                "trace_id":    trace_id,
                 "hash_count":  len(hashes),
                 "elapsed_ms":  round(elapsed_ms, 1),
                 "peak":        meta.get("peak", 0.0),
@@ -216,7 +197,6 @@ def run(worker_id: int = 0,
                 "worker_id":   worker_id,
             }).encode()
 
-            # Serialise hashes as a flat int32 array: [h0, t0, h1, t1, ...]
             flat = np.array(
                 [val for pair in hashes for val in pair],
                 dtype=np.int32
@@ -227,9 +207,8 @@ def run(worker_id: int = 0,
                                       flags=zmq.NOBLOCK)
             except zmq.Again:
                 log.warning("MatchEngine queue full — dropping result",
-                            extra=_extra(PROC))
+                            extra=_extra(PROC, trace_id))
 
-            # Heartbeat every 60s
             now = time.time()
             if now - last_heartbeat >= 60.0:
                 avg_ms = total_ms / max(processed, 1)

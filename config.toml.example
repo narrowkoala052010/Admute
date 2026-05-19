@@ -51,7 +51,7 @@ ir_remote_name         = "TV"
 ir_key_mute            = "KEY_MUTE"
 
 [api]
-port      = 5001
+port      = 5001    #Change to prefer channel
 log_level = "INFO"   # DEBUG | INFO | WARNING | ERROR
 
 [paths]

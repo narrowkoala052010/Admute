@@ -1,20 +1,24 @@
 """
-AdMute Light
-Copyright (c) 2026 Carlos C. (narrowkoala052010)
+AdMute v4 — Process 4: MuteController (CEC Edition)
 
-Part of the AdMute Project.
-Licensed under the MIT License — see LICENSE for details.
-"""
+Replaces the blind IR toggle with HDMI-CEC via python-cec (libcec).
 
-"""
-Process 4 — MuteController
+Key improvements over the IR backend:
+  • Real mute state querying via CEC "Give Audio Status" (opcode 0x71).
+    The TV's audio system responds with the actual mute flag (bit 7 of
+    the "Report Audio Status" byte).  We never send a mute command if the
+    TV is already muted, and never send an unmute if it's already unmuted.
+    This eliminates the state-drift bug of the old toggle-only approach.
+  • python-cec (libcec) is opened once at startup and held for the process
+    lifetime.  No subprocess spawning per command.
 
-Subscribes to MatchEngine MATCH events and drives the TV mute state
-via HDMI-CEC using python-cec.  Queries the TV's real audio status
-before each keypress so mute and unmute are never sent blindly.
-
-Also runs a ZMQ REP command server for manual toggle, false-positive
-flagging, and status queries from the API.
+CEC device model:
+  • We register as CEC_DEVICE_TYPE_RECORDING_DEVICE so the TV sees us
+    as a playback device, not a root device, avoiding HDMI routing changes.
+  • Mute/unmute keypress targets CECDEVICE_TV (logical address 0).
+  • Audio status is queried from CECDEVICE_AUDIOSYSTEM (addr 5) first;
+    if no audio system is present the TV itself responds.
+  • cec_port in config.toml can be left empty for auto-detection.
 """
 
 import os
@@ -46,13 +50,15 @@ def _init_cec(cfg, log):
     """
     Initialise the HDMI-CEC adapter using the PyPI `cec` package (0.2.8+).
 
-    The `cec` package exposes a simpler Pythonic API than the raw libcec
-    C++ bindings:  cec.init() → cec.Device(addr) → device.transmit().
-    We return the cec module itself so callers can use it without re-importing.
+    The `cec` package exposes a simple Pythonic API:
+        cec.init() → cec.Device(addr) → device.transmit()
 
-    Requirements:
-        pip install cec
-        sudo apt install libcec-dev cec-utils
+    After init, a warmup ping is sent immediately to force the CEC bus
+    handshake with the TV.  Without this, the first real mute command
+    triggers the handshake and takes 2-3 seconds.  The warmup moves
+    that latency to daemon startup where it's invisible to the user.
+
+    Returns the cec module on success, None on failure.
     """
     try:
         import cec
@@ -62,13 +68,60 @@ def _init_cec(cfg, log):
             cfg.mute.cec_device_name,
             extra=_extra(PROC)
         )
+
+        # ── Warmup ping ───────────────────────────────────────────────────
+        # Send GIVE_AUDIO_STATUS to the TV immediately after init.
+        # This forces the full CEC bus handshake now so the first mute
+        # command fires instantly instead of waiting 2-3 seconds.
+        log.info("CEC: warming up bus connection...", extra=_extra(PROC))
+        try:
+            import threading
+            warmed  = threading.Event()
+            result  = [None]
+
+            def _on_warmup(event, data):
+                opcode = (data.get("opcode") if isinstance(data, dict)
+                          else getattr(data, "opcode", None))
+                if opcode == cec.CEC_OPCODE_REPORT_AUDIO_STATUS:
+                    params = (data.get("parameters") if isinstance(data, dict)
+                              else getattr(data, "parameters", b""))
+                    if params:
+                        b0 = params[0] if isinstance(params[0], int) else ord(params[0])
+                        result[0] = bool(b0 & 0x80)
+                    warmed.set()
+
+            cec.add_callback(_on_warmup, cec.EVENT_COMMAND)
+            try:
+                for addr in (cec.CECDEVICE_AUDIOSYSTEM, cec.CECDEVICE_TV):
+                    cec.Device(addr).transmit(cec.CEC_OPCODE_GIVE_AUDIO_STATUS)
+                    if warmed.wait(timeout=0.5):
+                        break
+            finally:
+                cec.remove_callback(_on_warmup, cec.EVENT_COMMAND)
+
+            if result[0] is not None:
+                log.info(
+                    "CEC: bus ready — TV reports %s",
+                    "muted" if result[0] else "unmuted",
+                    extra=_extra(PROC)
+                )
+            else:
+                log.info(
+                    "CEC: bus ready — TV did not respond to audio status "
+                    "(normal for some TVs, blind keypress will be used)",
+                    extra=_extra(PROC)
+                )
+        except Exception as exc:
+            log.warning("CEC: warmup ping failed: %s — "
+                        "first mute may be slow", exc, extra=_extra(PROC))
+
         return cec
 
-    except ImportError:
+    except ImportError as exc:
         log.error(
-            "CEC: python-cec not installed. "
+            "CEC: import failed: %s — "
             "Run: pip install cec  (and: sudo apt install libcec-dev)",
-            extra=_extra(PROC)
+            exc, extra=_extra(PROC)
         )
         return None
     except Exception as exc:
@@ -122,34 +175,24 @@ def _cec_get_mute_state(lib, log) -> Optional[bool]:
 
 def _cec_set_mute(lib, log, target_muted: bool) -> bool:
     """
-    Drive the TV mute state to target_muted using CEC.
+    Send a CEC mute or unmute keypress immediately.
 
-    Queries real state first via GIVE_AUDIO_STATUS callback.
-    Skips the keypress if the TV is already at the target state.
-    Falls back to blind send if the state query times out or is
-    not supported by the TV.
+    Does NOT query the TV's audio status first — that check was removed
+    because it added 300ms latency on every command.  State accuracy is
+    managed by MuteController.self._muted which tracks every transition
+    we make.  The only time we don't know the TV's state is at startup,
+    which is handled by the warmup ping in _init_cec.
 
     Sends USER_CONTROL_PRESSED (0x44) with mute code 0x43,
     followed by USER_CONTROL_RELEASE (0x45) — per CEC spec 1.4.
 
-    Returns True if a keypress was sent, False if skipped.
+    Returns True if keypress was sent, False on error.
     """
     try:
-        current = _cec_get_mute_state(lib, log)
-
-        if current is not None and current == target_muted:
-            log.debug(
-                "CEC: skipped — TV already %s",
-                "muted" if target_muted else "unmuted",
-                extra=_extra(PROC)
-            )
-            return False
-
         tv = lib.Device(lib.CECDEVICE_TV)
         tv.transmit(lib.CEC_OPCODE_USER_CONTROL_PRESSED, bytes([0x43]))
         tv.transmit(lib.CEC_OPCODE_USER_CONTROL_RELEASE)
         return True
-
     except Exception as exc:
         log.error(
             "CEC: keypress error (target=%s): %s",

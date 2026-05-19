@@ -1,0 +1,59 @@
+# AdMute Light — Configuration Template
+#
+# Copy this file to config.toml and edit to match your setup:
+#   cp config.toml.example config.toml
+#
+# config.toml is in .gitignore and will never be committed.
+# This file (config.toml.example) is the safe template to commit.
+
+[audio]
+sample_rate       = 41000     #Adjust to match your setup
+chunk_size        = 2048
+buffer_seconds    = 1.0
+channels          = 2
+silence_threshold = 0.010
+# device_index = 0             # uncomment and set to override default input device
+
+[fingerprint]
+nperseg           = 2048
+noverlap_ratio    = 0.5
+peak_percentile   = 90
+max_filter_size   = 20
+fan_value         = 15
+max_time_delta    = 200
+
+[match]
+confidence_threshold = 10
+near_miss_ratio      = 0.75     # near_miss_min = threshold * this
+strike_min           = 1
+cooldown_seconds     = 35.0
+
+# ── Tiered cache ───────────────────────────────────────────────────────────────
+[cache]
+l1_size           = 5
+l2_size           = 50
+l1_window_days    = 30
+heartbeat_seconds = 60
+
+# ── Mute / CEC ─────────────────────────────────────────────────────────────────
+[mute]
+backend                = "cec"
+debounce_ms            = 1500
+safety_margin_seconds  = 1.5
+
+# CEC: leave cec_port empty for auto-detection (recommended).
+# Enable CEC on your TV first (Samsung: Anynet+, LG: SimpLink, Sony: BRAVIA Sync)
+cec_port               = ""
+cec_device_name        = "AdMute"
+
+# IR (legacy fallback — not recommended)
+ir_remote_name         = "TV"
+ir_key_mute            = "KEY_MUTE"
+
+[api]
+port      = 5001
+log_level = "INFO"   # DEBUG | INFO | WARNING | ERROR
+
+[paths]
+recordings_dir = "recordings"
+log_dir        = "logs"

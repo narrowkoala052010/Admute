@@ -1,0 +1,28 @@
+# AdMute Hybrid — Python Dependencies
+# Install with: pip install -r requirements.txt
+#
+# System dependencies (install before pip):
+#   sudo apt install portaudio19-dev libcec-dev cec-utils
+
+# ── Audio capture ─────────────────────────────────────────────
+pyaudio>=0.2.14
+
+# ── Signal processing ─────────────────────────────────────────
+numpy>=1.24.0
+scipy>=1.10.0
+
+# ── Inter-process messaging ───────────────────────────────────
+pyzmq>=25.0.0
+
+# ── Web API server ────────────────────────────────────────────
+aiohttp>=3.9.0
+aiofiles>=23.0.0
+
+# ── CEC mute control ─────────────────────────────────────────
+# Requires: sudo apt install libcec-dev cec-utils
+cec>=0.2.7
+
+# ── Configuration ─────────────────────────────────────────────
+# tomllib is built into Python 3.11+
+# Uncomment below if running Python 3.9 or 3.10 (Raspbian Bullseye):
+# tomli>=2.0.0

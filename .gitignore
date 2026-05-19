@@ -1,0 +1,56 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# ── Virtual environments ───────────────────────────────────────────────────────
+venvmute/
+venv/
+.venv/
+env/
+.env
+
+# ── AdMute runtime data ────────────────────────────────────────────────────────
+# These are generated at runtime and should never be committed.
+# The vault (admute.db) is personal — fingerprints vary by room acoustics
+# and recording conditions. Share intentionally, not by accident.
+admute.db
+admute.db-journal
+admute.db-shm
+admute.db-wal
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+logs/
+recordings/
+fingerprints/
+
+# ── Secrets ────────────────────────────────────────────────────────────────────
+# The API secret is stored in admute.db (already ignored above).
+# Never commit secrets. config.toml is safe to commit — it has no secrets.
+.env
+*.secret
+api_secret.txt
+config.toml
+
+# ── OS files ───────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# ── IDE ────────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.iml
+
+# ── Misc ───────────────────────────────────────────────────────────────────────
+*.csv
+data/

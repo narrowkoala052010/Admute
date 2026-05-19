@@ -1,0 +1,2629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#000000">
+<title>AdMute</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<style>
+
+/* ── DESIGN SYSTEM ─────────────────────────────────────────── */
+:root {
+  /* OLED black palette */
+  --void:    #000000;
+  --ink0:    #080808;
+  --ink1:    #111111;
+  --ink2:    #1A1A1A;
+  --ink3:    #242424;
+  --ink4:    #333333;
+
+  /* Cyber Lime — the only color that matters */
+  --lime:       #CCFF00;
+  --lime-dim:   rgba(204,255,0,0.12);
+  --lime-glow:  rgba(204,255,0,0.06);
+  --lime-soft:  rgba(204,255,0,0.25);
+
+  /* State colors — kept muted, lime dominates */
+  --red:     #FF3B30;
+  --red-dim: rgba(255,59,48,0.10);
+  --amber:   #FF9F0A;
+
+  /* Text */
+  --t0: #FFFFFF;
+  --t1: #888888;
+  --t2: #444444;
+  --t3: #222222;
+
+  /* Type */
+  --font-d: 'Barlow Condensed', sans-serif;
+  --font-m: 'JetBrains Mono', monospace;
+
+  /* Geometry */
+  --r:    12px;
+  --r-sm:  8px;
+  --r-lg: 20px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+}
+
+/* ── RESET ──────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{height:100%;overflow:hidden;background:var(--void);}
+body{
+  font-family:var(--font-d);
+  background:var(--void);
+  color:var(--t0);
+  height:100%;
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+  -webkit-tap-highlight-color:transparent;
+  letter-spacing:0.01em;
+}
+[x-cloak]{display:none!important;}
+
+/* ── APP SHELL ──────────────────────────────────────────────── */
+#app{
+  display:flex;
+  flex-direction:column;
+  height:100dvh;
+}
+
+.scroll-area{
+  flex:1;
+  overflow-y:auto;
+  overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  padding:0 14px calc(76px + var(--safe-b));
+}
+
+/* ── HEADER ─────────────────────────────────────────────────── */
+.hdr{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:12px 14px 10px;
+  padding-top:calc(12px + var(--safe-t));
+  flex-shrink:0;
+  position:relative;
+}
+.hdr::after{
+  content:'';
+  position:absolute;
+  bottom:0;left:14px;right:14px;
+  height:1px;
+  background:var(--ink3);
+}
+
+.wordmark{
+  font-size:22px;
+  font-weight:900;
+  letter-spacing:0.05em;
+  text-transform:uppercase;
+  color:var(--t0);
+}
+.wordmark em{
+  font-style:normal;
+  color:var(--lime);
+}
+
+.hdr-right{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.uptime-pill{
+  font-family:var(--font-m);
+  font-size:10px;
+  color:var(--t2);
+  background:var(--ink1);
+  border:1px solid var(--ink3);
+  border-radius:20px;
+  padding:4px 10px;
+  display:flex;
+  align-items:center;
+  gap:5px;
+}
+
+.status-led{
+  width:5px;height:5px;
+  border-radius:50%;
+  background:var(--lime);
+  box-shadow:0 0 6px var(--lime);
+}
+
+.status-led.offline{background:var(--red);box-shadow:0 0 6px var(--red);}
+
+.icon-btn{
+  width:36px;height:36px;
+  border-radius:50%;
+  background:var(--ink1);
+  border:1px solid var(--ink3);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+  color:var(--t1);
+  transition:all .15s;
+}
+.icon-btn:active{background:var(--ink2);transform:scale(.92);}
+.icon-btn svg{width:16px;height:16px;}
+
+/* ── BOTTOM NAV ─────────────────────────────────────────────── */
+.nav{
+  display:flex;
+  background:var(--ink0);
+  border-top:1px solid var(--ink2);
+  padding-bottom:var(--safe-b);
+  flex-shrink:0;
+  position:relative;
+  z-index:10;
+}
+
+.nav-item{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:10px 0 8px;
+  cursor:pointer;
+  gap:4px;
+  color:var(--t2);
+  font-size:9px;
+  font-weight:700;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  transition:color .2s;
+  position:relative;
+}
+
+.nav-item.active{color:var(--lime);}
+.nav-item svg{width:22px;height:22px;}
+
+.nav-dot{
+  width:3px;height:3px;
+  border-radius:50%;
+  background:var(--lime);
+  opacity:0;
+  transition:opacity .2s;
+}
+.nav-item.active .nav-dot{opacity:1;}
+
+.nav-badge {
+  position:absolute;
+  top:4px;
+  right:calc(50% - 22px);
+  background:var(--red);
+  color:var(--void);
+  font-family:var(--font-m);
+  font-size:9px;
+  font-weight:800;
+  padding:1px 5px;
+  border-radius:10px;
+  pointer-events:none;
+  box-shadow:0 2px 4px rgba(0,0,0,.5);
+}
+
+/* ── STATUS HERO ────────────────────────────────────────────── */
+.status-hero{
+  border-radius:var(--r-lg);
+  padding:20px;
+  margin:14px 0 12px;
+  position:relative;
+  overflow:hidden;
+  border:1px solid var(--ink3);
+  transition:all .4s cubic-bezier(.4,0,.2,1);
+  background:var(--ink0);
+}
+
+.status-hero.muted{
+  border-color:rgba(255,59,48,.3);
+  background:linear-gradient(135deg, #0D0000, var(--ink0));
+}
+
+.status-hero.listening{
+  border-color:rgba(204,255,0,.15);
+  background:linear-gradient(135deg, #040800, var(--ink0));
+}
+
+/* scanline effect when muted */
+.status-hero.muted::before{
+  content:'';
+  position:absolute;inset:0;
+  background:repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(255,59,48,.025) 3px,
+    rgba(255,59,48,.025) 4px
+  );
+  pointer-events:none;
+}
+
+.status-row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:8px;
+}
+
+.s-dot{
+  width:8px;height:8px;
+  border-radius:50%;
+  flex-shrink:0;
+}
+
+.listening .s-dot{
+  background:var(--lime);
+  box-shadow:0 0 0 0 rgba(204,255,0,.5);
+  animation:pulse-lime 2.5s infinite;
+}
+
+.muted .s-dot{
+  background:var(--red);
+  box-shadow:0 0 0 0 rgba(255,59,48,.5);
+  animation:pulse-red 1.5s infinite;
+}
+
+.mic-off .s-dot{background:var(--t2);}
+
+@keyframes pulse-lime{
+  0%  {box-shadow:0 0 0 0   rgba(204,255,0,.5);}
+  70% {box-shadow:0 0 0 12px rgba(204,255,0,0);}
+  100%{box-shadow:0 0 0 0   rgba(204,255,0,0);}
+}
+
+@keyframes pulse-red{
+  0%  {box-shadow:0 0 0 0   rgba(255,59,48,.5);}
+  70% {box-shadow:0 0 0 12px rgba(255,59,48,0);}
+  100%{box-shadow:0 0 0 0   rgba(255,59,48,0);}
+}
+
+.s-label{
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.15em;
+  text-transform:uppercase;
+}
+
+.listening .s-label{color:var(--lime);}
+.muted .s-label{color:var(--red);}
+.mic-off .s-label{color:var(--t2);}
+
+.s-ad-name{
+  font-size:26px;
+  font-weight:800;
+  line-height:1.1;
+  letter-spacing:-.01em;
+  color:var(--t0);
+  margin-bottom:10px;
+}
+
+.s-sub{
+  font-family:var(--font-m);
+  font-size:11px;
+  color:var(--t1);
+}
+
+.s-vault{
+  font-family:var(--font-m);
+  font-size:12px;
+  color:var(--t2);
+  margin-top:4px;
+}
+
+.s-vault span{color:var(--lime);}
+
+/* Countdown bar */
+.cdown-wrap{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-top:10px;
+}
+.cdown-bar{
+  flex:1;height:2px;
+  background:var(--ink3);
+  border-radius:1px;
+  overflow:hidden;
+}
+.cdown-fill{
+  height:100%;
+  background:var(--red);
+  border-radius:1px;
+  transition:width 1s linear;
+}
+.cdown-val{
+  font-family:var(--font-m);
+  font-size:11px;
+  color:var(--t1);
+  flex-shrink:0;
+}
+
+/* ── HERO RECORD BUTTON ─────────────────────────────────────── */
+.hero-circle-wrap{
+  display:flex;
+  justify-content:center;
+  padding:24px 0 32px;
+  position:relative;
+}
+
+.hero-circle{
+  width:220px;
+  height:220px;
+  border-radius:50%;
+  background:var(--ink1);
+  border:3px solid var(--ink3);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  position:relative;
+  transition:all .3s cubic-bezier(.4,0,.2,1);
+  overflow:visible;
+}
+
+.hero-circle:active{transform:scale(.94);}
+
+.hero-circle::before{
+  content:'';
+  position:absolute;
+  inset:-6px;
+  border-radius:50%;
+  border:2px solid rgba(255,230,0,.15);
+  animation:idle-breathe 4s ease-in-out infinite;
+}
+
+@keyframes idle-breathe{
+  0%,100%{opacity:.4;transform:scale(1);}
+  50%{opacity:1;transform:scale(1.04);}
+}
+
+.hero-circle.recording{
+  background:var(--void);
+  border-color:#FFE600;
+  box-shadow:
+    0 0 0  6px rgba(255,230,0,.1),
+    0 0 0 16px rgba(255,230,0,.05),
+    0 0 0 32px rgba(255,230,0,.02);
+  animation:record-pulse 1.2s ease-in-out infinite;
+}
+
+.hero-circle.recording::before{
+  border-color:rgba(255,230,0,.4);
+  animation:record-ring 1.2s ease-out infinite;
+}
+
+@keyframes record-pulse{
+  0%,100%{box-shadow:
+    0 0 0  6px rgba(255,230,0,.1),
+    0 0 0 16px rgba(255,230,0,.05),
+    0 0 0 32px rgba(255,230,0,.02);}
+  50%{box-shadow:
+    0 0 0  8px rgba(255,230,0,.2),
+    0 0 0 24px rgba(255,230,0,.1),
+    0 0 0 44px rgba(255,230,0,.04);}
+}
+
+@keyframes record-ring{
+  0%{transform:scale(1);opacity:.8;}
+  100%{transform:scale(1.35);opacity:0;}
+}
+
+.hero-icon{
+  width:64px;
+  height:64px;
+  flex-shrink:0;
+  transition:all .3s;
+  margin-top:-10px;
+}
+
+.hero-circle:not(.recording) .hero-icon{color:#FFE600; opacity: 0.8;}
+.hero-circle.recording .hero-icon{
+  color:#FFE600; 
+  opacity: 1;
+  filter: drop-shadow(0 0 8px rgba(255,230,0,.6));
+}
+
+.hero-label{
+  font-size:14px;
+  font-weight:900;
+  letter-spacing:.15em;
+  text-transform:uppercase;
+  transition:color .3s;
+  margin-top:8px;
+}
+
+.hero-circle:not(.recording) .hero-label{color:var(--t2);}
+.hero-circle.recording .hero-label{color:#FFE600;}
+
+.hero-timer{
+  font-family:var(--font-m);
+  font-size:14px;
+  font-weight:700;
+  color:#FFE600;
+  position:absolute;
+  bottom:26px; 
+}
+
+/* ── CONTROL BUTTONS ────────────────────────────────────────── */
+.ctrl-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-bottom:12px;
+}
+
+.ctrl-tile{
+  height:72px;
+  border-radius:var(--r);
+  border:1px solid var(--ink3);
+  background:var(--ink0);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  cursor:pointer;
+  transition:all .15s;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:var(--t1);
+}
+
+.ctrl-tile:active{background:var(--ink2);transform:scale(.97);}
+.ctrl-tile svg{width:20px;height:20px;}
+
+.ctrl-tile.muted-state{
+  border-color:rgba(255,59,48,.25);
+  color:var(--red);
+  background:var(--red-dim);
+}
+
+.fp-tile{
+  grid-column:1/-1;
+  height:64px;
+  border-radius:var(--r);
+  border:1px solid rgba(255,159,10,.2);
+  background:rgba(255,159,10,.06);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  cursor:pointer;
+  transition:all .15s;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:var(--amber);
+}
+.fp-tile:active{background:rgba(255,159,10,.12);transform:scale(.98);}
+.fp-tile svg{width:18px;height:18px;}
+
+/* ── MIC TOGGLE ROW ─────────────────────────────────────────── */
+.mic-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:var(--ink0);
+  border:1px solid var(--ink2);
+  border-radius:var(--r);
+  padding:13px 16px;
+  margin-bottom:10px;
+}
+
+.mic-label{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-size:13px;
+  font-weight:700;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  color:var(--t1);
+}
+.mic-label svg{width:16px;height:16px;}
+
+.toggle{
+  width:48px;height:26px;
+  background:var(--ink3);
+  border-radius:13px;
+  cursor:pointer;
+  position:relative;
+  transition:background .2s;
+  flex-shrink:0;
+}
+.toggle.on{background:var(--lime);}
+.toggle::after{
+  content:'';
+  position:absolute;
+  width:20px;height:20px;
+  border-radius:50%;
+  background:var(--void);
+  top:3px;left:3px;
+  transition:transform .2s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 1px 3px rgba(0,0,0,.5);
+}
+.toggle.on::after{transform:translateX(22px);}
+
+/* ── SNR STRIP ──────────────────────────────────────────────── */
+.snr-strip{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  background:var(--ink0);
+  border:1px solid var(--ink2);
+  border-radius:var(--r-sm);
+  padding:9px 14px;
+  cursor:pointer;
+  margin-bottom:14px;
+  transition:background .15s;
+}
+.snr-strip:active{background:var(--ink1);}
+
+.snr-lbl{
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.15em;
+  text-transform:uppercase;
+  color:var(--t2);
+  flex-shrink:0;
+}
+
+.snr-bar-bg{
+  flex:1;height:3px;
+  background:var(--ink3);
+  border-radius:2px;
+  overflow:hidden;
+}
+
+.snr-bar-fill{
+  height:100%;
+  border-radius:2px;
+  transition:width .6s ease;
+}
+
+.snr-val{
+  font-family:var(--font-m);
+  font-size:11px;
+  font-weight:700;
+  flex-shrink:0;
+  min-width:50px;
+  text-align:right;
+}
+
+.snr-pass .snr-bar-fill,.snr-pass .snr-val{background:var(--lime);color:var(--lime);}
+.snr-warn .snr-bar-fill,.snr-warn .snr-val{background:var(--amber);color:var(--amber);}
+.snr-fail .snr-bar-fill,.snr-fail .snr-val{background:var(--red);color:var(--red);}
+
+/* ── BENTO GRID (Stats) ─────────────────────────────────────── */
+.bento{
+  display:grid;
+  gap:10px;
+  margin:14px 0;
+}
+
+.bento-hero{
+  background:var(--ink0);
+  border:1px solid rgba(204,255,0,.15);
+  border-radius:var(--r-lg);
+  padding:24px 20px 20px;
+  position:relative;
+  overflow:hidden;
+}
+
+.bento-hero::before{
+  content:'';
+  position:absolute;
+  top:-60px;right:-60px;
+  width:180px;height:180px;
+  border-radius:50%;
+  background:radial-gradient(circle, rgba(204,255,0,.07), transparent 70%);
+  pointer-events:none;
+}
+
+.bento-eyebrow{
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  color:var(--t2);
+  margin-bottom:6px;
+}
+
+.bento-num{
+  font-size:72px;
+  font-weight:900;
+  line-height:.9;
+  letter-spacing:-.03em;
+  color:var(--lime);
+  text-shadow:0 0 40px rgba(204,255,0,.3);
+}
+
+.bento-unit{
+  font-size:16px;
+  font-weight:700;
+  color:var(--t1);
+  margin-top:6px;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+}
+
+.bento-sub{
+  font-family:var(--font-m);
+  font-size:10px;
+  color:var(--t2);
+  margin-top:8px;
+}
+
+.bento-row{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:10px;
+}
+
+.bento-tile{
+  background:var(--ink0);
+  border:1px solid var(--ink2);
+  border-radius:var(--r);
+  padding:14px 10px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+  cursor:pointer;
+  transition:border-color .2s;
+}
+.bento-tile:active{border-color:var(--ink3);}
+
+.bento-tile-num{
+  font-size:28px;
+  font-weight:900;
+  letter-spacing:-.02em;
+  line-height:1;
+  font-variant-numeric:tabular-nums;
+}
+
+.bento-tile-lbl{
+  font-size:8px;
+  font-weight:800;
+  letter-spacing:.15em;
+  text-transform:uppercase;
+  color:var(--t2);
+}
+
+/* ── SECTION TITLES ─────────────────────────────────────────── */
+.sec-title{
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  color:var(--t2);
+  margin:16px 0 8px;
+  padding-bottom:6px;
+  border-bottom:1px solid var(--ink2);
+}
+
+/* ── REVIEW CARDS ───────────────────────────────────────────── */
+.review-card{
+  background:var(--ink0);
+  border:1px solid rgba(204,255,0,.2);
+  border-radius:var(--r);
+  margin-bottom:12px;
+  overflow:hidden;
+}
+
+.review-hdr{
+  background:rgba(204,255,0,.04);
+  padding:12px 14px;
+  border-bottom:1px solid rgba(204,255,0,.1);
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.review-hdr-title{
+  font-size:13px;
+  font-weight:800;
+  color:var(--lime);
+  letter-spacing:.05em;
+  text-transform:uppercase;
+}
+
+.review-body{padding:14px;}
+
+.vs-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:14px;
+}
+
+.vs-col{
+  flex:1;
+  background:var(--ink1);
+  border:1px solid var(--ink2);
+  border-radius:var(--r-sm);
+  padding:10px;
+  min-width:0;
+}
+
+.vs-lbl{
+  font-size:9px;
+  font-weight:800;
+  color:var(--t2);
+  text-transform:uppercase;
+  letter-spacing:.1em;
+  margin-bottom:4px;
+}
+
+.vs-val{
+  font-size:13px;
+  font-weight:700;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.vs-divider{
+  font-size:10px;
+  font-weight:900;
+  color:var(--t2);
+}
+
+/* ── RECORDINGS ─────────────────────────────────────────────── */
+.rec-cards-wrap{padding:14px 0;}
+
+.rec-card{
+  background:var(--ink0);
+  border:1px solid var(--ink2);
+  border-radius:var(--r);
+  margin-bottom:10px;
+  overflow:hidden;
+  transition:border-color .2s;
+}
+.rec-card.expanded{border-color:var(--ink3);}
+
+.rec-header{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:13px;
+  cursor:pointer;
+}
+.rec-header:active{background:var(--ink1);}
+
+.rec-waveform{
+  width:68px;height:34px;
+  border-radius:6px;
+  background:var(--ink2);
+  flex-shrink:0;
+  overflow:hidden;
+}
+
+.rec-info{flex:1;min-width:0;}
+
+.rec-pills{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin-bottom:4px;
+}
+
+.pill{
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  padding:3px 7px;
+  border-radius:20px;
+}
+
+.pill-pending{background:var(--ink3);color:var(--t1);}
+.pill-ingested{
+  background:rgba(204,255,0,.1);
+  color:var(--lime);
+  border:1px solid rgba(204,255,0,.2);
+}
+.pill-rejected{background:var(--red-dim);color:var(--red);}
+
+.rec-meta{
+  font-family:var(--font-m);
+  font-size:10px;
+  color:var(--t2);
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.rec-dur{
+  background:var(--ink2);
+  padding:1px 5px;
+  border-radius:3px;
+}
+
+.rec-body{
+  padding:0 13px 13px;
+  border-top:1px solid var(--ink2);
+}
+
+audio{
+  width:100%;
+  margin:12px 0;
+  accent-color:var(--lime);
+}
+
+.form-group{margin-bottom:10px;}
+
+.form-label{
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.15em;
+  text-transform:uppercase;
+  color:var(--t2);
+  margin-bottom:5px;
+  display:block;
+}
+
+.form-select,.form-input,.form-textarea{
+  width:100%;
+  background:var(--ink1);
+  border:1px solid var(--ink3);
+  border-radius:var(--r-sm);
+  color:var(--t0);
+  font-family:var(--font-d);
+  font-size:14px;
+  font-weight:500;
+  padding:10px 12px;
+  -webkit-appearance:none;
+  appearance:none;
+  outline:none;
+  transition:border-color .2s;
+}
+
+.form-select:focus,.form-input:focus,.form-textarea:focus{
+  border-color:rgba(204,255,0,.3);
+}
+
+.form-select{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23444'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 10px center;
+  background-size:14px;
+  padding-right:30px;
+}
+
+.form-textarea{resize:none;height:64px;}
+
+.btn-row{display:flex;gap:8px;margin-top:12px;}
+
+.btn{
+  flex:1;
+  height:44px;
+  border-radius:var(--r-sm);
+  border:none;
+  cursor:pointer;
+  font-family:var(--font-d);
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  transition:all .15s;
+}
+.btn:active{transform:scale(.96);}
+.btn:disabled{opacity:.35;cursor:not-allowed;}
+.btn svg{width:15px;height:15px;}
+
+.btn-lime{
+  background:var(--lime);
+  color:var(--void);
+}
+
+.btn-ghost{
+  background:var(--ink2);
+  border:1px solid var(--ink3);
+  color:var(--t0);
+}
+
+.btn-danger{
+  background:var(--red-dim);
+  border:1px solid rgba(255,59,48,.2);
+  color:var(--red);
+}
+
+.delete-confirm{
+  background:var(--red-dim);
+  border:1px solid rgba(255,59,48,.2);
+  border-radius:var(--r-sm);
+  padding:12px;
+  margin-top:10px;
+}
+
+.delete-confirm p{
+  font-size:11px;
+  color:var(--t1);
+  margin-bottom:10px;
+  line-height:1.5;
+  font-weight:500;
+}
+
+.divider{height:1px;background:var(--ink2);margin:12px 0;}
+
+.ingest-hint{
+  font-size:10px;
+  color:var(--t2);
+  text-align:center;
+  margin-top:5px;
+  line-height:1.4;
+  font-family:var(--font-m);
+}
+
+.save-confirm{
+  font-family:var(--font-m);
+  font-size:10px;
+  color:var(--lime);
+  text-align:center;
+  margin-top:5px;
+  height:16px;
+  transition:opacity .3s;
+}
+
+/* ── SETTINGS PANEL ─────────────────────────────────────────── */
+.settings-panel{
+  position:fixed;inset:0;
+  background:var(--void);
+  z-index:100;
+  overflow-y:auto;
+  transform:translateX(100%);
+  transition:transform .3s cubic-bezier(.4,0,.2,1);
+}
+.settings-panel.open{transform:translateX(0);}
+
+.settings-hdr{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:14px;
+  padding-top:calc(14px + var(--safe-t));
+  border-bottom:1px solid var(--ink2);
+  position:sticky;top:0;
+  background:var(--void);
+  z-index:1;
+}
+
+.settings-title{
+  font-size:20px;
+  font-weight:900;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+}
+
+.settings-body{
+  padding:16px 14px;
+  padding-bottom:calc(32px + var(--safe-b));
+}
+
+.settings-sec{margin-bottom:28px;}
+
+.settings-sec-title{
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  color:var(--lime);
+  margin-bottom:10px;
+  padding-bottom:6px;
+  border-bottom:1px solid rgba(204,255,0,.1);
+}
+
+.settings-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:12px 0;
+  border-bottom:1px solid var(--ink2);
+}
+.settings-row:last-child{border-bottom:none;}
+
+.settings-row-label{
+  font-size:14px;
+  font-weight:700;
+  letter-spacing:.02em;
+}
+.settings-row-sub{
+  font-family:var(--font-m);
+  font-size:10px;
+  color:var(--t2);
+  margin-top:2px;
+}
+
+.radio-group{
+  display:flex;
+  gap:8px;
+  margin-top:8px;
+}
+
+.radio-opt{
+  flex:1;
+  height:38px;
+  border-radius:var(--r-sm);
+  border:1px solid var(--ink3);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:all .2s;
+  color:var(--t1);
+}
+.radio-opt.selected{
+  background:var(--lime-dim);
+  border-color:var(--lime);
+  color:var(--lime);
+}
+
+.slider-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-top:8px;
+}
+input[type=range]{
+  flex:1;
+  accent-color:var(--lime);
+  cursor:pointer;
+}
+.slider-val{
+  font-family:var(--font-m);
+  font-size:12px;
+  color:var(--lime);
+  min-width:42px;
+  text-align:right;
+}
+
+.danger-btn{
+  width:100%;
+  height:46px;
+  background:var(--red-dim);
+  border:1px solid rgba(255,59,48,.15);
+  border-radius:var(--r-sm);
+  color:var(--red);
+  font-family:var(--font-d);
+  font-size:13px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  cursor:pointer;
+  margin-bottom:10px;
+  transition:background .15s;
+}
+.danger-btn:active{background:rgba(255,59,48,.15);}
+
+/* ── SETUP SCREEN ───────────────────────────────────────────── */
+.setup-screen{
+  position:fixed;inset:0;
+  background:var(--void);
+  z-index:200;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:32px 20px;
+  padding-top:calc(32px + var(--safe-t));
+}
+
+.setup-logo{
+  font-size:52px;
+  font-weight:900;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  margin-bottom:6px;
+}
+.setup-logo em{font-style:normal;color:var(--lime);}
+
+.setup-tag{
+  font-family:var(--font-m);
+  font-size:11px;
+  color:var(--t2);
+  margin-bottom:40px;
+  text-align:center;
+}
+
+.setup-card{
+  width:100%;
+  max-width:380px;
+  background:var(--ink0);
+  border:1px solid var(--ink2);
+  border-radius:var(--r-lg);
+  padding:24px;
+}
+
+.setup-steps{
+  display:flex;
+  gap:6px;
+  margin-bottom:24px;
+}
+.setup-dot{
+  height:3px;
+  border-radius:2px;
+  background:var(--ink3);
+  flex:1;
+  transition:all .3s;
+}
+.setup-dot.active{background:var(--lime);}
+
+.setup-step-title{
+  font-size:20px;
+  font-weight:800;
+  letter-spacing:.02em;
+  margin-bottom:6px;
+}
+
+.setup-step-sub{
+  font-size:13px;
+  font-weight:500;
+  color:var(--t1);
+  margin-bottom:20px;
+  line-height:1.5;
+}
+
+.setup-hint{
+  font-family:var(--font-m);
+  font-size:10px;
+  color:var(--t2);
+  margin-top:8px;
+  line-height:1.5;
+}
+
+.btn-full{
+  width:100%;
+  height:52px;
+  border-radius:var(--r-sm);
+  border:none;
+  cursor:pointer;
+  font-family:var(--font-d);
+  font-size:14px;
+  font-weight:800;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  transition:all .15s;
+  margin-top:16px;
+}
+.btn-full:active{transform:scale(.98);}
+.btn-full:disabled{opacity:.35;cursor:not-allowed;}
+
+.btn-full.primary{background:var(--lime);color:var(--void);}
+.btn-full.secondary{background:var(--ink2);border:1px solid var(--ink3);color:var(--t0);}
+
+/* SNR result */
+.snr-big{
+  text-align:center;
+  padding:16px 0;
+}
+.snr-big-num{
+  font-size:56px;
+  font-weight:900;
+  font-family:var(--font-m);
+  line-height:1;
+}
+.snr-big-cls{
+  font-size:13px;
+  font-weight:700;
+  margin-top:4px;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+}
+.snr-big-note{
+  font-size:12px;
+  color:var(--t1);
+  margin-top:8px;
+  line-height:1.5;
+}
+
+/* ── SNR MODAL ──────────────────────────────────────────────── */
+.modal-overlay{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.8);
+  z-index:150;
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  backdrop-filter:blur(4px);
+}
+
+.modal-sheet{
+  background:var(--ink0);
+  border:1px solid var(--ink2);
+  border-radius:var(--r-lg) var(--r-lg) 0 0;
+  width:100%;
+  max-width:480px;
+  padding:20px;
+  padding-bottom:calc(20px + var(--safe-b));
+}
+
+.modal-handle{
+  width:32px;height:3px;
+  background:var(--ink3);
+  border-radius:2px;
+  margin:0 auto 20px;
+}
+
+.modal-title{
+  font-size:20px;
+  font-weight:800;
+  letter-spacing:.03em;
+  text-transform:uppercase;
+  margin-bottom:16px;
+}
+
+/* ── TOASTS ─────────────────────────────────────────────────── */
+.toast-zone{
+  position:fixed;
+  top:calc(14px + var(--safe-t));
+  left:14px;right:14px;
+  z-index:300;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  pointer-events:none;
+}
+
+.toast{
+  background:var(--ink1);
+  border:1px solid var(--ink3);
+  border-radius:var(--r-sm);
+  padding:11px 14px;
+  font-size:13px;
+  font-weight:600;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  box-shadow:0 4px 24px rgba(0,0,0,.6);
+  animation:toast-in .2s ease;
+}
+.toast.success{border-color:rgba(204,255,0,.2);}
+.toast.error  {border-color:rgba(255,59,48,.2);}
+.toast.info   {border-color:rgba(255,159,10,.2);}
+.toast svg{width:15px;height:15px;flex-shrink:0;}
+
+@keyframes toast-in{
+  from{opacity:0;transform:translateY(-6px);}
+  to  {opacity:1;transform:translateY(0);}
+}
+
+/* ── OFFLINE BANNER ─────────────────────────────────────────── */
+.offline-bar{
+  background:var(--red-dim);
+  border-bottom:1px solid rgba(255,59,48,.2);
+  padding:8px 14px;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.05em;
+  color:var(--red);
+  text-align:center;
+  text-transform:uppercase;
+}
+
+/* ── EMPTY STATE ────────────────────────────────────────────── */
+.empty{
+  text-align:center;
+  padding:60px 20px;
+  color:var(--t2);
+}
+.empty svg{width:44px;height:44px;margin:0 auto 14px;opacity:.2;}
+.empty h3{font-size:16px;font-weight:800;color:var(--t1);margin-bottom:6px;letter-spacing:.03em;text-transform:uppercase;}
+.empty p{font-size:13px;line-height:1.5;font-weight:500;}
+
+/* ── SPINNER ────────────────────────────────────────────────── */
+.spin{
+  width:16px;height:16px;
+  border:2px solid rgba(255,255,255,.15);
+  border-top-color:currentColor;
+  border-radius:50%;
+  animation:rotate .5s linear infinite;
+  flex-shrink:0;
+}
+@keyframes rotate{to{transform:rotate(360deg);}}
+
+/* ── EXILE BADGE ────────────────────────────────────────────── */
+.vault-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  padding:2px 7px;
+  border-radius:20px;
+  border:1px solid;
+}
+.vault-active{
+  color:var(--lime);
+  border-color:rgba(204,255,0,.2);
+  background:rgba(204,255,0,.06);
+}
+.vault-exiled{
+  color:var(--red);
+  border-color:rgba(255,59,48,.2);
+  background:var(--red-dim);
+}
+
+/* Lists */
+.top-ads-card, .log-card, .snr-hist-card{
+  background:var(--ink0);
+  border:1px solid var(--ink2);
+  border-radius:var(--r);
+  overflow:hidden;
+}
+
+.top-ad-row, .log-row, .snr-hist-row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:12px 14px;
+  border-bottom:1px solid var(--ink2);
+}
+.top-ad-row:last-child, .log-row:last-child, .snr-hist-row:last-child{border-bottom:none;}
+
+.top-ad-rank{font-family:var(--font-m);font-size:10px;color:var(--t2);width:14px;flex-shrink:0;}
+.top-ad-name{flex:1;min-width:0;font-size:13px;font-weight:700;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.top-ad-bar-wrap{width:70px;flex-shrink:0;}
+.top-ad-bar-bg{height:3px;background:var(--ink3);border-radius:2px;overflow:hidden;}
+.top-ad-bar-fill{height:100%;background:var(--lime);border-radius:2px;box-shadow:0 0 6px rgba(204,255,0,.4);transition:width .8s cubic-bezier(.4,0,.2,1);}
+.top-ad-count{font-family:var(--font-m);font-size:10px;color:var(--lime);text-align:right;margin-top:3px;}
+
+.log-row.fp-row{background:rgba(255,59,48,.04);}
+.log-ad{flex:1;min-width:0;}
+.log-ad-name{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.log-meta{font-family:var(--font-m);font-size:9px;color:var(--t2);margin-top:2px;display:flex;align-items:center;gap:6px;}
+.exile-badge{font-size:8px;font-weight:700;letter-spacing:.05em;color:var(--red);background:var(--red-dim);border:1px solid rgba(255,59,48,.2);padding:2px 5px;border-radius:3px;}
+.log-right{text-align:right;flex-shrink:0;}
+.log-dur{font-family:var(--font-m);font-size:12px;color:var(--t0);}
+.log-time{font-family:var(--font-m);font-size:9px;color:var(--t2);margin-top:2px;}
+
+.load-more{width:100%;height:44px;background:var(--void);border:1px solid var(--ink2);border-radius:var(--r-sm);color:var(--t1);font-family:var(--font-d);font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;margin-top:10px;transition:background .15s;}
+.load-more:active{background:var(--ink1);}
+
+.snr-hist-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.snr-hist-dot.pass{background:var(--lime);box-shadow:0 0 4px var(--lime);}
+.snr-hist-dot.warn{background:var(--amber);}
+.snr-hist-dot.fail{background:var(--red);}
+
+/* ── SENTIENT VISUAL OVERRIDES ─────────────────────────────── */
+:root {
+  --electric-blue: #04D9FF;
+  --cyber-lime: #CCFF00;
+}
+
+.id-badge {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  font-family: var(--font-m);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--electric-blue);
+  text-shadow: 0 0 8px rgba(4, 217, 255, 0.4);
+  opacity: 0.9;
+  letter-spacing: 0.05em;
+  z-index: 5;
+}
+
+.pill-ingested {
+  background: rgba(204,255,0,0.1);
+  color: var(--cyber-lime);
+  border: 1px solid rgba(204,255,0,0.3);
+  box-shadow: 0 0 12px rgba(204,255,0,0.1);
+}
+
+.summon-bar {
+  background: var(--ink1);
+  border: 1px solid var(--ink3);
+  border-radius: var(--r-sm);
+  padding: 12px 16px;
+  width: 100%;
+  color: var(--t0);
+  font-family: var(--font-m);
+  font-size: 14px;
+  margin-bottom: 20px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.summon-bar:focus {
+  border-color: var(--electric-blue);
+  box-shadow: 0 0 10px rgba(4, 217, 255, 0.1);
+}
+
+</style>
+</head>
+<body x-data="admute()" x-init="init()" x-cloak>
+
+<div class="setup-screen" x-show="!isSetup" x-transition.opacity>
+  <div class="setup-logo">Ad<em>Mute</em></div>
+  <p class="setup-tag">signal intelligence for your living room</p>
+
+  <div class="setup-card">
+    <div class="setup-steps">
+      <div class="setup-dot" :class="setupStep >= 1 ? 'active' : ''"></div>
+      <div class="setup-dot" :class="setupStep >= 2 ? 'active' : ''"></div>
+      <div class="setup-dot" :class="setupStep >= 3 ? 'active' : ''"></div>
+    </div>
+
+    <div x-show="setupStep === 1">
+      <div class="setup-step-title">Find your Pi</div>
+      <p class="setup-step-sub">Enter the IP address of your Raspberry Pi.</p>
+      <div class="form-group">
+        <label class="form-label">Pi IP Address</label>
+        <input class="form-input" type="text" placeholder="192.168.1.45"
+               x-model="setupAddress" @keydown.enter="testConnection()">
+      </div>
+      <p class="setup-hint">Run <code>hostname -I</code> on your Pi to find it.</p>
+      <button class="btn-full primary" :disabled="!setupAddress || setupTesting"
+              @click="testConnection()">
+        <span x-show="setupTesting"><div class="spin"></div></span>
+        <span x-text="setupTesting ? 'Connecting...' : 'Connect'"></span>
+      </button>
+    </div>
+
+    <div x-show="setupStep === 2">
+      <div class="setup-step-title">Enter your secret</div>
+      <p class="setup-step-sub">Paste the API secret printed when daemon.py first started.</p>
+      <div class="form-group">
+        <label class="form-label">API Secret</label>
+        <input class="form-input" type="password" placeholder="Paste 64-char secret"
+               x-model="setupSecret" @keydown.enter="saveSecret()">
+      </div>
+      <button class="btn-full primary" :disabled="!setupSecret" @click="saveSecret()">
+        Confirm Secret
+      </button>
+    </div>
+
+    <div x-show="setupStep === 3">
+      <div class="setup-step-title">Mic placement</div>
+      <p class="setup-step-sub">Test signal quality with the TV on at normal volume.</p>
+
+      <div x-show="!snrTestResult && !snrTesting"
+           style="text-align:center;padding:20px 0;color:var(--t2);">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:36px;height:36px;margin:0 auto 8px;display:block;opacity:.3">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+        </svg>
+        <p style="font-size:13px;font-weight:500;">TV must be playing audio during the test.</p>
+      </div>
+
+      <div class="snr-big" x-show="snrTestResult">
+        <div class="snr-big-num"
+             :style="`color:${snrTestResult?.classification === 'pass' ? 'var(--lime)' : snrTestResult?.classification === 'warn' ? 'var(--amber)' : 'var(--red)'}`"
+             x-text="snrTestResult?.snr_db + ' dB'"></div>
+        <div class="snr-big-cls"
+             :style="`color:${snrTestResult?.classification === 'pass' ? 'var(--lime)' : snrTestResult?.classification === 'warn' ? 'var(--amber)' : 'var(--red)'}`"
+             x-text="snrTestResult?.classification === 'pass' ? '✓ Excellent' : snrTestResult?.classification === 'warn' ? '⚠ Acceptable' : '✕ Poor'"></div>
+        <p class="snr-big-note" x-text="snrTestResult?.note"></p>
+      </div>
+
+      <button class="btn-full primary" :disabled="snrTesting" @click="runSnrTest()">
+        <span x-show="snrTesting"><div class="spin"></div></span>
+        <span x-text="snrTesting ? 'Sampling 3s...' : snrTestResult ? 'Test Again' : 'Run Placement Test'"></span>
+      </button>
+      <button class="btn-full secondary" @click="finishSetup()">
+        <span x-text="snrTestResult ? 'Go to Control →' : 'Skip for now'"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="app" x-show="isSetup" x-transition.opacity>
+
+  <div class="offline-bar" x-show="!isOnline">
+    ⚠ Cannot reach AdMute — check Wi-Fi
+  </div>
+
+  <div class="hdr">
+    <div class="wordmark">Ad<em>Mute</em></div>
+    <div class="hdr-right">
+      <div class="uptime-pill">
+        <div class="status-led" :class="!isOnline ? 'offline' : ''"></div>
+        <span x-text="isOnline ? formatUptime(uptime) : 'offline'"></span>
+      </div>
+      <div class="icon-btn" @click="showSettings = true">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="scroll-area">
+
+    <div x-show="view === 'control'">
+
+      <div class="status-hero"
+           :class="!micActive ? 'mic-off' : isMuted ? 'muted' : 'listening'">
+        <div class="status-row">
+          <div class="s-dot"></div>
+          <span class="s-label"
+                x-text="!micActive ? 'Mic Off' : isMuted ? 'Muted' : 'Listening'"></span>
+        </div>
+
+        <div x-show="isMuted">
+          <div class="s-ad-name" x-text="currentAdName || 'Ad detected'"></div>
+          <div class="cdown-wrap">
+            <span class="cdown-val mono" x-text="muteCountdown > 0 ? muteCountdown + 's' : '—'"></span>
+            <div class="cdown-bar">
+              <div class="cdown-fill" :style="`width:${countdownPct}%`"></div>
+            </div>
+          </div>
+        </div>
+
+        <div x-show="!isMuted && micActive">
+          <div class="s-vault">
+            Vault <span x-text="vaultSize"></span> ads
+            <span x-show="vaultSize === 0" style="color:var(--t2)"> — record your first ad below</span>
+          </div>
+        </div>
+
+        <div x-show="!micActive">
+          <div class="s-vault" style="color:var(--t2)">Listening paused</div>
+        </div>
+      </div>
+
+      <div class="hero-circle-wrap">
+        <div class="hero-circle" :class="isRecording ? 'recording' : ''"
+             @click="toggleRecord()" :style="!micActive ? 'opacity:.4;pointer-events:none' : ''">
+          <svg class="hero-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                  x-bind:d="isRecording
+                    ? 'M21 12a9 9 0 11-18 0 9 9 0 0118 0z M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z'
+                    : 'M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z'"/>
+          </svg>
+          <span class="hero-label"
+                x-text="isRecording ? 'Stop' : 'Record'"></span>
+          <span class="hero-timer"
+                x-text="isRecording ? formatRecTime(recordingSeconds) : ''"></span>
+        </div>
+      </div>
+
+      <div class="ctrl-grid">
+        <div class="ctrl-tile" :class="isMuted ? 'muted-state' : ''" @click="toggleMute()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                  x-bind:d="isMuted
+                    ? 'M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2'
+                    : 'M15.536 8.464a5 5 0 010 7.072M12 6v12m-3.536-9.536a5 5 0 000 7.072M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z'"/>
+          </svg>
+          <span x-text="isMuted ? 'Unmute' : 'Mute'"></span>
+        </div>
+
+        <div class="ctrl-tile" style="position:relative;"
+             :style="!micActive ? 'opacity:.4' : ''">
+          <div class="mic-label" style="gap:6px;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:18px;height:18px;">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+            </svg>
+            Mic
+          </div>
+          <div class="toggle" :class="micActive ? 'on' : ''" @click="toggleMic()"></div>
+        </div>
+
+        <div class="fp-tile" x-show="isMuted" x-transition @click="falsePositive()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:18px;height:18px;">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+          FALSE POSITIVE — EXILE &amp; UNMUTE
+        </div>
+      </div>
+
+      <div class="snr-strip"
+           :class="snrClass === 'pass' ? 'snr-pass' : snrClass === 'warn' ? 'snr-warn' : snrClass === 'fail' ? 'snr-fail' : ''"
+           @click="openSnrModal()">
+        <span class="snr-lbl">Signal</span>
+        <div class="snr-bar-bg">
+          <div class="snr-bar-fill" :style="`width:${snrDb ? Math.min(snrDb/60*100,100) : 0}%`"></div>
+        </div>
+        <span class="snr-val" x-text="snrDb ? snrDb.toFixed(0) + ' dB' : '—'"></span>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:12px;height:12px;color:var(--t2);flex-shrink:0;">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+      </div>
+    </div> <div x-show="view === 'review'">
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:14px 0 12px;">
+        <div style="font-size:20px;font-weight:900;letter-spacing:.03em;text-transform:uppercase;">Acoustic Workbench</div>
+        <div style="font-family:var(--font-m);font-size:11px;color:var(--electric-blue);" x-text="(summonedRecordings || []).length + ' summoned'"></div>
+      </div>
+
+      <form @submit.prevent="summonIDs()" style="width: 100%;">
+        <input class="summon-bar" 
+               type="text" 
+               inputmode="numeric"
+               placeholder="Enter IDs (e.g. 2, 45, 51)" 
+               x-model="summonQuery">
+        <button type="submit" style="display:none;"></button>
+      </form>
+      
+      <div class="empty" x-show="!summonedRecordings || summonedRecordings.length === 0">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:44px;height:44px;margin:0 auto 14px;opacity:.2;">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <h3>Workbench Offline</h3>
+        <p>Summon recordings by ID to begin forensic analysis.</p>
+      </div>
+
+      <template x-for="rec in summonedRecordings" :key="rec.id">
+        <div class="review-card" style="position: relative; border-color: var(--ink3);">
+          <div class="id-badge" x-text="'#' + rec.id"></div>
+          
+          <div class="review-hdr" style="background: var(--ink1);">
+            <div class="review-hdr-title" style="color: var(--t1);" x-text="rec.status.toUpperCase()"></div>
+          </div>
+
+          <div class="review-body">
+            <div style="font-family: var(--font-m); font-size: 11px; color: var(--t1); margin-bottom: 10px;">
+               <span style="color: var(--lime);" x-text="formatDur(rec.duration_seconds)"></span> | 
+               <span x-text="rec.streaming_service && rec.streaming_service !== 'Unknown' ? rec.streaming_service : 'Unknown Source'"></span>
+            </div>
+            
+            <audio controls :src="apiUrl('/api/recordings/'+rec.id+'/audio')" style="margin-top:0;margin-bottom:14px;height:36px;width:100%;"></audio>
+            
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <div x-show="view === 'recordings'">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:14px 0 12px;">
+        <div style="font-size:20px;font-weight:900;letter-spacing:.03em;text-transform:uppercase;">Recordings</div>
+        <div style="font-family:var(--font-m);font-size:11px;color:var(--t2);" x-text="standardRecordings.length + ' total'"></div>
+      </div>
+
+      <div class="empty" x-show="standardRecordings.length === 0">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+        </svg>
+        <h3>No recordings yet</h3>
+        <p>Go to Control and tap<br><strong>Record</strong> during a commercial break.</p>
+      </div>
+
+      <template x-for="rec in standardRecordings" :key="rec.id">
+        <div class="rec-card" :class="expandedRec === rec.id ? 'expanded' : ''" style="position: relative;">
+          <div class="id-badge" x-text="'#' + rec.id"></div>
+          
+          <div class="rec-header" @click="toggleRec(rec.id)">
+            <canvas class="rec-waveform" :id="'wv-'+rec.id" width="136" height="68"></canvas>
+            <div class="rec-info">
+              <div class="rec-pills">
+                <span :class="'pill pill-' + rec.status"
+                      x-text="rec.status === 'pending_review' ? 'Pending' : rec.status === 'ingested' ? 'Ingested' : 'Rejected'"></span>
+                <span class="vault-badge vault-active" x-show="rec.status === 'ingested'">● Active</span>
+              </div>
+              <div class="rec-meta">
+                <span class="rec-dur" x-text="formatDur(rec.duration_seconds)"></span>
+                <span x-text="relTime(rec.recorded_at)"></span>
+              </div>
+              <div style="font-family:var(--font-m);font-size:9px;color:var(--t2);margin-top:2px;"
+                   x-text="rec.streaming_service && rec.streaming_service !== 'Unknown' ? rec.streaming_service : ''"></div>
+            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                 style="width:14px;height:14px;color:var(--t2);flex-shrink:0;transition:transform .2s;"
+                 :style="expandedRec === rec.id ? 'transform:rotate(180deg)' : ''">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </div>
+
+          <div class="rec-body" x-show="expandedRec === rec.id" x-transition>
+            <audio controls :src="apiUrl('/api/recordings/'+rec.id+'/audio')"></audio>
+
+            <div class="form-group">
+              <label class="form-label">Streaming Service</label>
+              <select class="form-select" x-model="rec.streaming_service">
+                <option value="Unknown">Select...</option>
+                <option>Netflix</option><option>Disney+</option>
+                <option>Prime Video</option><option>Apple TV+</option>
+                <option>Crave</option><option>YouTube</option><option>Sportsnet</option>
+                <option>Cable / Broadcast</option><option>Crunchyroll</option><option>Other</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Category</label>
+              <select class="form-select" x-model="rec.category">
+                <option value="Uncategorized">Select...</option>
+                <option>Cars</option><option>Gambling/Betting</option><option>Food & Drink</option>
+                <option>Pharma</option><option>Finance</option><option>Entertainment/Media</option><option>Tech/Electronics</option>
+                <option>Retail/Packaged goods</option><option>PSA/government</option><option>Travel</option><option>Telecom</option><option>Other</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Notes</label>
+              <textarea class="form-input form-textarea" x-model="rec.notes" placeholder="Optional notes..."></textarea>
+            </div>
+
+            <button class="btn btn-ghost" style="width:100%;" @click="saveMetadata(rec)">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+              Save Metadata
+            </button>
+            <div class="save-confirm" :id="'saved-'+rec.id" style="opacity:0;"></div>
+
+            <div class="divider"></div>
+
+            <div x-show="rec.status === 'pending_review'">
+              <button class="btn btn-lime" style="width:100%;height:48px;"
+                      :disabled="ingestingId === rec.id"
+                      @click="ingestRecording(rec)">
+                <span x-show="ingestingId === rec.id"><div class="spin"></div></span>
+                <span x-text="ingestingId === rec.id ? 'Analyzing...' : 'INGEST NOW'"></span>
+              </button>
+              <p class="ingest-hint">System will check for variants before activating.</p>
+            </div>
+
+            <div x-show="rec.status === 'ingested'"
+                 style="text-align:center;padding:6px 0;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;"
+                 :style="`color:var(--lime)`">
+              ✓ In vault — detecting
+            </div>
+
+            <div class="divider"></div>
+
+            <div x-show="deleteConfirmId !== rec.id">
+              <button class="btn btn-danger" style="width:100%;" @click="deleteConfirmId = rec.id">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+                Delete Recording
+              </button>
+            </div>
+
+            <div class="delete-confirm" x-show="deleteConfirmId === rec.id" x-transition>
+              <p x-text="rec.status === 'ingested'
+                ? 'Permanently deletes the recording, removes the ad from the vault, and purges all fingerprint hashes.'
+                : 'Permanently deletes the recording file.'"></p>
+              <div class="btn-row">
+                <button class="btn btn-ghost" @click="deleteConfirmId = null">Cancel</button>
+                <button class="btn btn-danger" @click="deleteRecording(rec)">
+                  <span x-show="deletingId === rec.id"><div class="spin"></div></span>
+                  <span x-text="deletingId === rec.id ? 'Deleting...' : 'Yes, Delete All'"></span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <div x-show="view === 'stats'">
+
+      <div class="bento-hero" style="margin-top:14px;">
+        <div class="bento-eyebrow">This Month</div>
+        <div class="bento-num" x-text="stats ? stats.minutes_saved_this_month.toFixed(1) : '—'"></div>
+        <div class="bento-unit">Minutes Saved</div>
+        <div class="bento-sub" x-text="stats ? formatMinHuman(stats.minutes_saved_this_month) : ''"></div>
+      </div>
+
+      <div class="bento-row" style="margin-top:10px;">
+        <div class="bento-tile">
+          <div class="bento-tile-num" style="color:var(--lime);" x-text="stats?.mute_events_this_month ?? '—'"></div>
+          <div class="bento-tile-lbl">Mutes</div>
+        </div>
+        <div class="bento-tile">
+          <div class="bento-tile-num" style="color:var(--red);" x-text="stats?.false_positives_this_month ?? '—'"></div>
+          <div class="bento-tile-lbl">Exiled</div>
+        </div>
+        <div class="bento-tile">
+          <div class="bento-tile-num" style="color:var(--t0);" x-text="stats?.vault_size ?? '—'"></div>
+          <div class="bento-tile-lbl">In Vault</div>
+        </div>
+      </div>
+
+      <div x-show="stats?.top_muted_ads?.length > 0">
+        <div class="sec-title">Top Muted Ads</div>
+        <div class="top-ads-card">
+          <template x-for="(ad, i) in stats?.top_muted_ads || []" :key="i">
+            <div class="top-ad-row">
+              <span class="top-ad-rank" x-text="i + 1"></span>
+              <div class="top-ad-name" x-text="formatAdTitle(ad)"></div>
+              <div class="top-ad-bar-wrap">
+                <div class="top-ad-bar-bg">
+                  <div class="top-ad-bar-fill"
+                       :style="`width:${(ad.count/stats.top_muted_ads[0].count)*100}%`"></div>
+                </div>
+                <div class="top-ad-count" x-text="ad.count + 'x'"></div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <div x-show="snrHistory.length > 0">
+        <div class="sec-title">Placement History</div>
+        <div class="snr-hist-card">
+          <template x-for="(s, i) in snrHistory" :key="i">
+            <div class="snr-hist-row">
+              <div class="snr-hist-dot" :class="s.classification"></div>
+              <div style="flex:1;">
+                <div style="font-size:13px;font-weight:700;"
+                     x-text="s.classification === 'pass' ? 'Good' : s.classification === 'warn' ? 'Acceptable' : 'Poor'"></div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-family:var(--font-m);font-size:12px;"
+                     :style="`color:${s.classification==='pass'?'var(--lime)':s.classification==='warn'?'var(--amber)':'var(--red)'}`"
+                     x-text="s.snr_db.toFixed(0) + ' dB'"></div>
+                <div style="font-family:var(--font-m);font-size:9px;color:var(--t2);" x-text="relTime(s.measured_at)"></div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <div x-show="muteLog.length > 0">
+        <div class="sec-title">Mute Log</div>
+        <div class="log-card">
+          <template x-for="(e, i) in muteLog" :key="e.id">
+            <div class="log-row" :class="e.was_false_positive ? 'fp-row' : ''">
+              <div class="log-ad">
+                <div class="log-ad-name" x-text="formatAdTitle(e)"></div>
+                <div class="log-meta">
+                  <span x-text="e.mute_method?.toUpperCase()"></span>
+                  <span x-show="e.confidence_score"> · <span x-text="e.confidence_score"></span></span>
+                  <span class="exile-badge" x-show="e.was_false_positive">EXILED</span>
+                </div>
+              </div>
+              <div class="log-right">
+                <div class="log-dur" x-text="e.duration_actual ? e.duration_actual.toFixed(1)+'s' : '—'"></div>
+                <div class="log-time" x-text="relTime(e.muted_at)"></div>
+              </div>
+            </div>
+          </template>
+        </div>
+        <button class="load-more" x-show="muteLog.length < muteLogTotal" @click="loadMoreLog()">
+          Load More
+        </button>
+      </div>
+
+      <div style="height:16px;"></div>
+    </div> </div> <div class="nav">
+    <div class="nav-item" :class="view === 'control' ? 'active' : ''" @click="switchView('control')">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+      </svg>
+      Control
+      <div class="nav-dot"></div>
+    </div>
+    
+    <div class="nav-item" :class="view === 'review' ? 'active' : ''" @click="switchView('review')">
+      <div class="nav-badge" x-show="pendingReviewsCount > 0" x-text="pendingReviewsCount"></div>
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+      </svg>
+      Review
+      <div class="nav-dot"></div>
+    </div>
+
+    <div class="nav-item" :class="view === 'recordings' ? 'active' : ''" @click="switchView('recordings')">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+      </svg>
+      Recordings
+      <div class="nav-dot"></div>
+    </div>
+
+    <div class="nav-item" :class="view === 'stats' ? 'active' : ''" @click="switchView('stats')">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+      </svg>
+      Stats
+      <div class="nav-dot"></div>
+    </div>
+  </div>
+
+</div><div class="settings-panel" :class="showSettings ? 'open' : ''">
+  <div class="settings-hdr">
+    <div class="settings-title">Settings</div>
+    <div class="icon-btn" @click="showSettings = false">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </div>
+  </div>
+  <div class="settings-body">
+
+    <div class="settings-sec">
+      <div class="settings-sec-title">Connection</div>
+      <div class="form-group">
+        <label class="form-label">Pi IP Address</label>
+        <input class="form-input" type="text" x-model="piAddress">
+      </div>
+      <div class="form-group">
+        <label class="form-label">API Secret</label>
+        <input class="form-input" type="password" x-model="apiSecret">
+      </div>
+      <button class="btn btn-lime" style="width:100%;height:46px;margin-top:6px;" @click="saveConnection()">
+        Save Connection
+      </button>
+      <div style="margin-top:8px;font-family:var(--font-m);font-size:10px;color:var(--t2);">
+        <span :style="`color:${isOnline?'var(--lime)':'var(--red)'}`"
+              x-text="isOnline ? '● Connected · ' + formatUptime(uptime) : '● Offline'"></span>
+      </div>
+    </div>
+
+    <div class="settings-sec">
+      <div class="settings-sec-title">Mute Method</div>
+      <div class="form-label">Backend</div>
+      <div class="radio-group">
+        <div class="radio-opt" :class="muteBackend === 'ir' ? 'selected' : ''" @click="muteBackend='ir'">IR Blaster</div>
+        <div class="radio-opt" :class="muteBackend === 'cec' ? 'selected' : ''" @click="muteBackend='cec'">HDMI CEC</div>
+      </div>
+      <div x-show="muteBackend === 'ir'" style="margin-top:12px;">
+        <div class="form-group">
+          <label class="form-label">Remote Name</label>
+          <input class="form-input" type="text" x-model="irRemoteName">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mute Key</label>
+          <input class="form-input" type="text" x-model="irKeyMute">
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-sec">
+      <div class="settings-sec-title">Detection Tuning</div>
+
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Confidence Threshold</div>
+          <div class="settings-row-sub">Higher = fewer false positives</div>
+        </div>
+      </div>
+      <div class="slider-row">
+        <input type="range" min="10" max="100" step="5" x-model.number="confidenceThreshold">
+        <span class="slider-val" x-text="confidenceThreshold"></span>
+      </div>
+
+      <div class="settings-row" style="margin-top:12px;">
+        <div>
+          <div class="settings-row-label">Safety Margin</div>
+          <div class="settings-row-sub">Unmute before ad ends (seconds)</div>
+        </div>
+      </div>
+      <div class="slider-row">
+        <input type="range" min="0.5" max="3" step="0.5" x-model.number="safetyMargin">
+        <span class="slider-val" x-text="safetyMargin + 's'"></span>
+      </div>
+    </div>
+
+    <div class="settings-sec">
+      <div class="settings-sec-title">Placement</div>
+      <button class="btn btn-ghost" style="width:100%;height:46px;" @click="showSnrModal=true;showSettings=false;">
+        Run SNR Placement Test
+      </button>
+    </div>
+
+    <div class="settings-sec">
+      <div class="settings-sec-title" style="color:var(--red);border-color:rgba(255,59,48,.1);">Danger Zone</div>
+      <button class="danger-btn" @click="if(confirm('Clear all mute history?'))toast('Coming soon','info')">
+        Clear Mute History
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<div class="modal-overlay" x-show="showSnrModal" x-transition.opacity @click.self="showSnrModal=false">
+  <div class="modal-sheet" @click.stop>
+    <div class="modal-handle"></div>
+    <div class="modal-title">Placement Test</div>
+
+    <div x-show="!snrTestResult && !snrTesting"
+         style="text-align:center;padding:20px 0;color:var(--t2);font-size:13px;font-weight:500;">
+      Ensure the TV is playing audio before running the test.
+    </div>
+
+    <div x-show="snrTesting" style="text-align:center;padding:28px 0;">
+      <div class="spin" style="width:28px;height:28px;border-width:3px;margin:0 auto 10px;"></div>
+      <p style="font-size:13px;color:var(--t1);font-weight:600;">Sampling 3 seconds...</p>
+    </div>
+
+    <div class="snr-big" x-show="snrTestResult && !snrTesting">
+      <div class="snr-big-num"
+           :style="`color:${snrTestResult?.classification==='pass'?'var(--lime)':snrTestResult?.classification==='warn'?'var(--amber)':'var(--red)'}`"
+           x-text="snrTestResult?.snr_db + ' dB'"></div>
+      <div class="snr-big-cls"
+           :style="`color:${snrTestResult?.classification==='pass'?'var(--lime)':snrTestResult?.classification==='warn'?'var(--amber)':'var(--red)'}`"
+           x-text="snrTestResult?.classification==='pass'?'✓ Excellent':snrTestResult?.classification==='warn'?'⚠ Acceptable':'✕ Poor — reposition mic'"></div>
+      <p class="snr-big-note" x-text="snrTestResult?.note"></p>
+    </div>
+
+    <div class="btn-row" style="margin-top:16px;">
+      <button class="btn btn-ghost" @click="showSnrModal=false">Close</button>
+      <button class="btn btn-lime" :disabled="snrTesting" @click="runSnrTest()">
+        <span x-show="snrTesting"><div class="spin"></div></span>
+        <span x-text="snrTesting ? 'Testing...' : 'Test Again'"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-zone">
+  <template x-for="t in toasts" :key="t.id">
+    <div class="toast" :class="t.type">
+      <svg x-show="t.type==='success'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="var(--lime)">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <svg x-show="t.type==='error'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="var(--red)">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <svg x-show="t.type==='info'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="var(--amber)">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <span x-text="t.msg"></span>
+    </div>
+  </template>
+</div>
+
+<script>
+/* ── Pure JS HMAC-SHA256 (HTTP safe — no crypto.subtle needed) ── */
+function sha256(msg){
+  function rr(v,a){return(v>>>a)|(v<<(32-a));}
+  const mp=Math.pow,mw=mp(2,32);
+  let i,j,r='';
+  const w=[],k=[];let h=[];let pc=k.length;
+  const ic={};
+  for(let c=2;pc<64;c++){
+    if(!ic[c]){
+      for(i=0;i<313;i+=c)ic[i]=c;
+      h[pc]=(mp(c,.5)*mw)|0;
+      k[pc++]=(mp(c,1/3)*mw)|0;
+    }
+  }
+  
+  const abl = msg.length * 8; 
+  
+  msg+='\x80';
+  while(msg.length%64-56)msg+='\x00';
+  
+  for(i=0;i<msg.length;i++){
+    j=msg.charCodeAt(i);
+    if(j>>8)return;
+    w[i>>2]|=j<<((3-i)%4)*8;
+  }
+  w[w.length]=(abl/mw)|0;
+  w[w.length]=abl;
+  for(j=0;j<w.length;){
+    const ws=w.slice(j,j+=16),oh=h.slice(0);
+    for(i=0;i<64;i++){
+      const i2=i+j-16,w15=ws[i-15],w2=ws[i-2];
+      const a=h[0],e=h[4];
+      const t1=h[7]+(rr(e,6)^rr(e,11)^rr(e,25))+((e&h[5])^(~e&h[6]))+k[i]+(ws[i]=(i<16)?ws[i]:(ws[i-16]+(rr(w15,7)^rr(w15,18)^(w15>>>3))+ws[i-7]+(rr(w2,17)^rr(w2,19)^(w2>>>10)))|0);
+      const t2=(rr(a,2)^rr(a,13)^rr(a,22))+((a&h[1])^(a&h[2])^(h[1]&h[2]));
+      h=[(t1+t2)|0].concat(h);h[4]=(h[4]+t1)|0;h.length=8;
+    }
+    h=h.map((x,i)=>(x+oh[i])|0);
+  }
+  for(i=0;i<8;i++)for(j=3;j+1;j--){const b=(h[i]>>(j*8))&255;r+=((b<16)?0:'')+b.toString(16);}
+  return r;
+}
+
+function hmacSha256(key,msg){
+  const bs=64;let kb=[];
+  for(let i=0;i<key.length;i++)kb.push(key.charCodeAt(i));
+  if(kb.length>bs){const h=sha256(key);kb=[];for(let i=0;i<h.length;i+=2)kb.push(parseInt(h.substr(i,2),16));}
+  while(kb.length<bs)kb.push(0);
+  const op=kb.map(b=>b^0x5c),ip=kb.map(b=>b^0x36);
+  const is=ip.map(b=>String.fromCharCode(b)).join('');
+  const os=op.map(b=>String.fromCharCode(b)).join('');
+  const ih=sha256(is+msg);
+  let ib='';
+  for(let i=0;i<ih.length;i+=2)ib+=String.fromCharCode(parseInt(ih.substr(i,2),16));
+  return sha256(os+ib);
+}
+
+async function hmacSign(secret,method,path,body=''){
+  const ts=Math.floor(Date.now()/1000).toString();
+  const msg=ts+method.toUpperCase()+path+body;
+  return `HMAC ${ts}.${hmacSha256(secret,msg)}`;
+}
+
+/* ── Waveform renderer ── */
+async function drawWave(canvas,url){
+  try{
+    const r=await fetch(url);
+    if(!r.ok)return;
+    const buf=await r.arrayBuffer();
+    const ctx2=new(window.AudioContext||window.webkitAudioContext)();
+    const dec=await ctx2.decodeAudioData(buf);
+    ctx2.close();
+    const d=dec.getChannelData(0);
+    const step=Math.ceil(d.length/canvas.width);
+    const ctx=canvas.getContext('2d');
+    const W=canvas.width,H=canvas.height,mid=H/2;
+    ctx.clearRect(0,0,W,H);
+    for(let i=0;i<W;i++){
+      let mn=1,mx=-1;
+      for(let j=0;j<step;j++){const v=d[i*step+j]||0;if(v<mn)mn=v;if(v>mx)mx=v;}
+      const yl=mid+mn*mid*.85,yh=mid+mx*mid*.85;
+      ctx.strokeStyle='rgba(204,255,0,0.5)';
+      ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(i,yl);ctx.lineTo(i,yh);ctx.stroke();
+    }
+  }catch(e){}
+}
+
+/* ── Alpine app ── */
+function admute(){
+  return {
+    isSetup:false,
+    setupStep:1,
+    setupAddress:'',
+    setupSecret:'',
+    setupTesting:false,
+
+    piAddress:'',
+    apiSecret:'',
+    isOnline:false,
+    _authFailed:false,
+
+    isMuted:false,
+    currentAdName:null,
+    currentAdId:null,
+    micActive:true,
+    muteBackend:'ir',
+    vaultSize:0,
+    snrDb:null,
+    snrClass:null,
+    uptime:0,
+    muteStartTime:null,
+    muteDuration:0,
+    muteCountdown:0,
+    countdownPct:100,
+    _cTimer:null,
+
+    view:'control',
+    showSettings:false,
+
+    isRecording:false,
+    recordingSeconds:0,
+    _recTimer:null,
+
+    recordings:[],
+    expandedRec:null,
+    ingestingId:null,
+    deletingId:null,
+    deleteConfirmId:null,
+    linkingId:null,
+
+    stats:null,
+    muteLog:[],
+    muteLogPage:1,
+    muteLogTotal:0,
+    snrHistory:[],
+
+    showSnrModal:false,
+    snrTestResult:null,
+    snrTesting:false,
+
+    confidenceThreshold:25,
+    safetyMargin:1.5,
+    irRemoteName:'hisense',
+    irKeyMute:'KEY_MUTE',
+
+    toasts:[],
+    _tid:0,
+
+    summonQuery: '',
+    summonedRecordings: [],
+
+    get pendingReviews() {
+        // Only show in Review tab IF it has a proposed parent
+        return this.recordings.filter(r => r.status === 'pending_review' && r.pending_link_ad_id);
+    },
+    get pendingReviewsCount() {
+        return this.pendingReviews.length;
+    },
+    get standardRecordings() {
+        // Show in Recordings tab if active, OR if it's brand new and hasn't been sniffed yet
+        return this.recordings.filter(r => r.status !== 'pending_review' || !r.pending_link_ad_id);
+    },
+
+    /* ── Init ── */
+    init(){
+      const s=localStorage.getItem('admute_cfg');
+      if(s){
+        try{
+          const c=JSON.parse(s);
+          this.piAddress=c.piAddress||'';
+          this.apiSecret=c.apiSecret||'';
+          if(this.piAddress&&this.apiSecret){
+            this.isSetup=true;
+            this.startPolling();
+            this.loadConfig();
+            this.loadRecordings(); 
+          }
+        }catch(e){}
+      }
+      document.addEventListener('visibilitychange',()=>{
+        if(document.visibilityState==='visible'){
+          const s=localStorage.getItem('admute_cfg');
+          if(s){try{const c=JSON.parse(s);this.piAddress=c.piAddress||'';this.apiSecret=c.apiSecret||'';}catch(e){}}
+        }
+      });
+    },
+
+    /* ── Setup ── */
+    async testConnection(){
+      this.setupTesting=true;
+      try{
+        const r=await fetch(`http://${this.setupAddress}:5001/api/health`);
+        if(r.ok){this.piAddress=this.setupAddress;this.setupStep=2;}
+        else this.toast('Could not reach Pi','error');
+      }catch(e){this.toast('Connection failed — check IP','error');}
+      this.setupTesting=false;
+    },
+    saveSecret(){this.apiSecret=this.setupSecret.trim();this.setupStep=3;},
+    async finishSetup(){
+      localStorage.setItem('admute_cfg',JSON.stringify({piAddress:this.piAddress,apiSecret:this.apiSecret}));
+      this.isSetup=true;
+      this.startPolling();
+      await this.loadConfig();
+      this.loadRecordings();
+    },
+
+    /* ── API ── */
+    apiUrl(p){return `http://${this.piAddress}:5001${p}`;},
+
+    async api(method,path,body=null){
+      const bs=body?JSON.stringify(body):'';
+      const auth=await hmacSign(this.apiSecret,method,path,bs);
+      const opts={method,headers:{'Authorization':auth,'Content-Type':'application/json'}};
+      if(bs)opts.body=bs;
+      const r=await fetch(this.apiUrl(path),opts);
+      if(r.status===401){
+        if(!this._authFailed){
+          this._authFailed=true;
+          this.toast('Authentication failed — check secret in Settings','error');
+        }
+        throw new Error('unauthorized');
+      }
+      this._authFailed=false;
+      return r.json();
+    },
+
+    /* ── Polling ── */
+    startPolling(){
+      this.pollStatus();
+      setInterval(()=>this.pollStatus(),2000);
+    },
+
+    async pollStatus(){
+      try{
+        const s=await this.api('GET','/api/status');
+        this.isOnline=true;
+        this.isMuted=s.is_muted;
+        this.currentAdName=s.current_ad_name;
+        this.currentAdId=s.current_ad_id;
+        this.micActive=s.mic_active;
+        this.muteBackend=s.mute_backend;
+        this.vaultSize=s.vault_size;
+        this.uptime=s.uptime;
+        if(s.snr_db!==null){this.snrDb=s.snr_db;this.snrClass=s.snr_class;}
+        if(s.is_muted&&s.current_ad_id){if(!this._cTimer)this._startCdown();}
+        else{this._stopCdown();this.muteCountdown=0;this.countdownPct=100;}
+      }catch(e){this.isOnline=false;}
+    },
+
+    _startCdown(){
+      if(this._cTimer)return;
+      this._cTimer=setInterval(()=>{
+        if(!this.isMuted){this._stopCdown();return;}
+        if(this.muteCountdown>0){
+          this.muteCountdown--;
+          this.countdownPct=(this.muteCountdown/Math.max(this.muteDuration,1))*100;
+        }
+      },1000);
+    },
+    _stopCdown(){if(this._cTimer){clearInterval(this._cTimer);this._cTimer=null;}},
+
+    /* ── Control ── */
+    async toggleMute(){
+      try{await this.api('POST','/api/mute/toggle');await this.pollStatus();}
+      catch(e){this.toast('Mute command failed','error');}
+    },
+
+    async falsePositive(){
+      try{
+        const r=await this.api('POST','/api/mute/false-positive');
+        if(r.ok){
+          this.toast(`"${r.ad_name||'Ad'}" exiled from vault — unmuted`,'info');
+          await this.pollStatus();
+        }
+      }catch(e){this.toast('False positive command failed','error');}
+    },
+
+    async toggleMic(){
+      try{
+        const r=await this.api('POST','/api/mic/toggle');
+        if(r.ok){this.micActive=r.mic_active;this.toast(r.mic_active?'Mic on':'Mic off','info');}
+      }catch(e){this.toast('Mic toggle failed','error');}
+    },
+
+    async toggleRecord(){
+      if(this.isRecording){
+        clearInterval(this._recTimer);this._recTimer=null;
+        this.isRecording=false;
+        try{
+          const r=await this.api('POST','/api/record/stop');
+          if(r.ok){
+            this.toast('Saved — go to Recordings to add notes & ingest','success');
+            if(this.view==='recordings' || this.view==='review') this.loadRecordings();
+          }else this.toast(r.error||'Recording failed','error');
+        }catch(e){this.toast('Stop failed','error');}
+        this.recordingSeconds=0;
+      }else{
+        try{
+          const r=await this.api('POST','/api/record/start');
+          if(r.ok){
+            this.isRecording=true;this.recordingSeconds=0;
+            this._recTimer=setInterval(()=>this.recordingSeconds++,1000);
+          }else this.toast('Could not start recording','error');
+        }catch(e){this.toast('Start failed','error');}
+      }
+    },
+
+    /* ── Recordings & Reviews ── */
+    async summonIDs() {
+  // 1. Scrub all whitespace immediately (e.g., "1,  2" -> "1,2")
+      const cleanIDs = this.summonQuery.replace(/\s+/g, '');
+  
+      if (!cleanIDs) return;
+
+      try {
+    // 2. Use cleanIDs in the API call to ensure HMAC signature matches the URL
+        const d = await this.api('GET', `/api/recordings/summon?ids=${cleanIDs}`);
+    
+        this.summonedRecordings = d;
+        this.toast(`Summoned ${d.length} assets to workbench`, 'success');
+    
+    // 3. Update the UI box to show the cleaned IDs
+        this.summonQuery = cleanIDs;
+    
+      } catch(e) {
+        console.error("Workbench Summoning Error:", e);
+        this.toast('Summoning failed — check authentication or IDs', 'error');
+      }
+    },
+
+    async loadRecordings(){
+      try{
+        const d=await this.api('GET','/api/recordings');
+        this.recordings=d;
+        this.$nextTick(()=>d.forEach(r=>{
+          if(r.status !== 'pending_review' || !r.pending_link_ad_id){
+            const c=document.getElementById('wv-'+r.id);
+            if(c)drawWave(c,this.apiUrl('/api/recordings/'+r.id+'/audio'));
+          }
+        }));
+      }catch(e){this.toast('Could not load recordings','error');}
+    },
+
+    toggleRec(id){
+      this.expandedRec=this.expandedRec===id?null:id;
+      this.deleteConfirmId=null;
+    },
+
+    async saveMetadata(rec){
+      try{
+        const r=await this.api('PATCH',`/api/recordings/${rec.id}`,{
+          streaming_service:rec.streaming_service,
+          category:rec.category,
+          notes:rec.notes
+        });
+        if(r.ok){
+          const el=document.getElementById('saved-'+rec.id);
+          if(el){el.textContent='✓ Saved';el.style.opacity='1';setTimeout(()=>el.style.opacity='0',2000);}
+        }
+      }catch(e){this.toast('Save failed','error');}
+    },
+
+    async ingestRecording(rec){
+      this.ingestingId=rec.id;
+      try{
+        const r=await this.api('POST',`/api/recordings/${rec.id}/ingest`);
+        if(r.ok){
+          if(r.status === 'pending_review'){
+             this.toast('Variant link detected — moved to Review tab', 'info');
+          } else {
+             this.toast(`Added to vault — ${r.hash_count} hashes · ${r.duration}s`,'success');
+             this.vaultSize++;
+          }
+          this.loadRecordings();
+        }else this.toast(r.error||'Ingest failed','error');
+      }catch(e){this.toast('Ingest failed','error');}
+      this.ingestingId=null;
+    },
+
+    async acceptLink(rec){
+      this.linkingId=rec.id;
+      try{
+        const r=await this.api('POST',`/api/recordings/${rec.id}/link/accept`);
+        if(r.ok){
+          this.toast('Linked as child to Master Ad','success');
+          this.loadRecordings();
+          this.vaultSize++;
+        }else this.toast(r.error||'Link failed','error');
+      }catch(e){this.toast('Link failed','error');}
+      this.linkingId=null;
+    },
+
+    async rejectLink(rec){
+      this.linkingId=rec.id;
+      try{
+        const r=await this.api('POST',`/api/recordings/${rec.id}/link/reject`);
+        if(r.ok){
+          this.toast('Ingested as standalone Ad','info');
+          this.loadRecordings();
+          this.vaultSize++;
+        }else this.toast(r.error||'Reject failed','error');
+      }catch(e){this.toast('Reject failed','error');}
+      this.linkingId=null;
+    },
+
+    async deleteRecording(rec){
+      this.deletingId=rec.id;
+      try{
+        const r=await this.api('DELETE',`/api/recordings/${rec.id}`,{confirm:true});
+        if(r.ok){
+          const msg=r.purged?.ad?`Deleted — ${r.purged.hashes||0} hashes purged`:'Recording deleted';
+          this.toast(msg,'success');
+          this.recordings=this.recordings.filter(x=>x.id!==rec.id);
+          this.deleteConfirmId=null;
+          this.expandedRec=null;
+          if(r.purged?.ad)this.vaultSize=Math.max(0,this.vaultSize-1);
+        }else this.toast(r.error||'Delete failed','error');
+      }catch(e){this.toast('Delete failed','error');}
+      this.deletingId=null;
+    },
+
+    /* ── Stats ── */
+    async loadStats(){
+      try{
+        const sum=await this.api('GET','/api/stats/summary');
+        this.stats=sum;
+        const log=await this.api('GET','/api/stats/mute-log?page=1&limit=20');
+        this.muteLog=log.items||[];this.muteLogTotal=log.total||0;this.muteLogPage=1;
+        const snr=await this.api('GET','/api/stats/snr-history');
+        this.snrHistory=snr||[];
+      }catch(e){this.toast('Could not load stats','error');}
+    },
+
+    async loadMoreLog(){
+      this.muteLogPage++;
+      try{
+        const r=await this.api('GET',`/api/stats/mute-log?page=${this.muteLogPage}&limit=20`);
+        this.muteLog=[...this.muteLog,...(r.items||[])];
+        this.muteLogTotal=r.total;
+      }catch(e){this.toast('Could not load more','error');}
+    },
+
+    /* ── SNR ── */
+    openSnrModal(){this.showSnrModal=true;},
+
+    async runSnrTest(){
+      this.snrTesting=true;this.snrTestResult=null;
+      try{
+        const r=await this.api('POST','/api/snr-test');
+        if(r.ok){
+          this.snrTestResult=r;
+          this.snrDb=r.snr_db;this.snrClass=r.classification;
+        }else this.toast('SNR test failed','error');
+      }catch(e){this.toast('SNR test failed','error');}
+      this.snrTesting=false;
+    },
+
+    /* ── Config ── */
+    async loadConfig(){
+      try{
+        const r=await this.api('GET','/api/config');
+        this.confidenceThreshold=r.match?.confidence_threshold||25;
+        this.safetyMargin=r.mute?.safety_margin_seconds||1.5;
+        this.irRemoteName=r.mute?.ir_remote_name||'hisense';
+        this.irKeyMute=r.mute?.ir_key_mute||'KEY_MUTE';
+        this.muteBackend=r.mute?.backend||'ir';
+      }catch(e){}
+    },
+
+    saveConnection(){
+      this.apiSecret = this.apiSecret.trim();
+      localStorage.setItem('admute_cfg',JSON.stringify({piAddress:this.piAddress,apiSecret:this.apiSecret}));
+      this._authFailed=false;
+      this.toast('Connection saved','success');
+      this.showSettings=false;
+    },
+
+    /* ── View switching ── */
+    switchView(v){
+      this.view=v;
+      if(v==='recordings' || v==='review')this.loadRecordings();
+      if(v==='stats')this.loadStats();
+    },
+
+    /* ── Toasts ── */
+    toast(msg,type='info'){
+      const id=++this._tid;
+      this.toasts.push({id,msg,type});
+      setTimeout(()=>{this.toasts=this.toasts.filter(t=>t.id!==id);},3500);
+    },
+
+    /* ── Brand-Killer Formatter ── */
+    formatAdTitle(ad) {
+      if (ad.notes && ad.notes.trim() !== '') return ad.notes;
+      
+      const cat = ad.category && ad.category !== 'Uncategorized' ? ad.category : null;
+      const svc = ad.streaming_service && ad.streaming_service !== 'Unknown' ? ad.streaming_service : null;
+      const id = ad.ad_id || ad.id || ad.name?.replace(/\D/g, '') || ad.ad_name?.replace(/\D/g, '') || '???';
+
+      if (cat && svc) return `${cat} Ad on ${svc}`;
+      if (cat) return `${cat} Ad`;
+      if (svc) return `Commercial on ${svc}`;
+
+      return `Silenced Target #${id}`;
+    },
+
+    /* ── Formatters ── */
+    formatUptime(s){
+      if(!s)return'—';
+      const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);
+      return h>0?`${h}h ${m}m`:`${m}m`;
+    },
+    formatRecTime(s){
+      const m=Math.floor(s/60),sec=s%60;
+      return`${m}:${sec.toString().padStart(2,'0')}`;
+    },
+    formatDur(s){
+      if(!s)return'—';
+      const m=Math.floor(s/60),sec=Math.round(s%60);
+      return m>0?`${m}:${sec.toString().padStart(2,'0')}`:`0:${sec.toString().padStart(2,'0')}`;
+    },
+    relTime(dt){
+      if(!dt)return'';
+      try{
+        const d=new Date(dt),now=new Date(),diff=now-d;
+        if(diff<60000)return'Just now';
+        if(diff<3600000)return`${Math.floor(diff/60000)}m ago`;
+        if(diff<86400000)return`Today ${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
+        if(diff<172800000)return`Yesterday ${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
+        return d.toLocaleDateString([],{month:'short',day:'numeric'})+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+      }catch(e){return dt;}
+    },
+    formatMinHuman(m){
+      if(!m||m===0)return'';
+      const h=Math.floor(m/60),min=Math.round(m%60);
+      if(h===0)return`${min} minutes of ads muted`;
+      return`${h}h ${min>0?min+'m ':''} of ads back`;
+    },
+  };
+}
+</script>
+</body>
+</html>

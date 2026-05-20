@@ -7,17 +7,38 @@ Licensed under the MIT License — see LICENSE for details.
 """
 
 """
-Process 3 — MatchEngine (Tiered Cache Edition)
 
-Receives fingerprint hash batches from FingerprintWorkers and scores
-them against a three-tier cache:
+Matching strategy — three tiers, checked in order:
 
-  L1 (Kings)   — top-5 ads by 30-day detection count, resident in RAM
-  L2 (Context) — last-50 detected ads in an OrderedDict RAM cache
-  L3 (Vault)   — SQLite fallback; hits are warmed into L2 automatically
+  L1 (Kings):
+      Top l1_size (default 5) ads ranked by 30-day detection count.
+      Stored as a plain dict {ad_id → AdEntry} for O(1) membership.
+      Recalculated every heartbeat from mute_log stats.
 
-Publishes MATCH, NEAR_MISS, and STRIKE events to MuteController and
-the API via ZMQ PUB.  Cache is synced with the DB every 60 seconds.
+  L2 (Context):
+      Last l2_size (default 50) heard ads, plus any newly ingested ads.
+      Stored as an OrderedDict {ad_id → AdEntry} where the tail is the
+      most recently heard/added entry.  Insertion, promotion, and eviction
+      are all O(1) via move_to_end / popitem.
+
+  L3 (Vault):
+      Standard SQLite fallback.  Only hashes for ads NOT already in L1/L2
+      are queried.  A confident L3 hit warms the matching ad into L2.
+
+  Invariant enforced every heartbeat:  L1 ∩ L2 = ∅   (no hash duplication)
+
+Heartbeat (every heartbeat_seconds, default 60):
+  1. Fetch all active ad_ids from DB.
+  2. Evict any L1/L2 entries whose ad is now deactivated or purged.
+  3. Load genuinely new ads (created_at > last heartbeat time) → L2 tail.
+  4. Recalculate L1 from 30-day mute_log stats.
+  5. Demote L1 ads falling out of top-N → L2 tail.
+  6. Promote L2 ads entering top-N → L1 (removing them from L2).
+  7. Enforce L2 ≤ l2_size (evict oldest from head if needed).
+  8. Assert L1 ∩ L2 = ∅ and fix any violation.
+
+RAM footprint (worst case):
+  55 ads × 1,800 hashes × 8 bytes ≈ 792 KB   (negligible on Pi 4B)
 """
 
 import os
@@ -56,11 +77,16 @@ class AdEntry:
     hashes maps hash_value → time_offset — identical to the data in the
     SQLite hashes table, loaded once so time-coherence scoring requires
     zero database I/O for L1 and L2 tier hits.
+
+    pessimistic_duration is the shortest duration in this ad's variant
+    family.  Computed at cache load / heartbeat time so MuteController
+    gets it from RAM with zero SQL overhead at match time.
     """
-    ad_id:    int
-    ad_name:  str
-    duration: float
-    hashes:   dict   # {hash_value (int): time_offset (int)}
+    ad_id:                int
+    ad_name:              str
+    duration:             float
+    hashes:               dict    # {hash_value (int): time_offset (int)}
+    pessimistic_duration: float = 0.0  # min(family durations), set by heartbeat
 
 
 # ── CACHE STATE ───────────────────────────────────────────────────────────────
@@ -75,6 +101,12 @@ _l1: dict[int, AdEntry] = {}
 
 # L2 — last-50-heard; tail = most recent, head = oldest (first to evict)
 _l2: OrderedDict = OrderedDict()
+
+# Timestamp of the last completed heartbeat — used to detect genuinely
+# new ingests (ads created AFTER this time) vs. simply uncached ads.
+# Without this, every ad that fell out of the 50-slot L2 gets treated
+# as "new" on every heartbeat, causing constant churn.
+_last_heartbeat_ts: float = 0.0
 
 
 # ── SCORING ───────────────────────────────────────────────────────────────────
@@ -156,6 +188,7 @@ def _load_entry(conn, ad_id: int, ad_name: str,
                 duration: float) -> Optional[AdEntry]:
     """
     Load all hashes for one ad from SQLite into an AdEntry.
+    Also computes pessimistic_duration (shortest in variant family).
     Returns None if the ad has no hashes (should not happen in practice).
     """
     rows = conn.execute(
@@ -164,12 +197,66 @@ def _load_entry(conn, ad_id: int, ad_name: str,
     ).fetchall()
     if not rows:
         return None
+
+    # Compute pessimistic duration — min in this ad's variant family
+    pess_dur = _family_min_duration(conn, ad_id, duration)
+
     return AdEntry(
-        ad_id    = ad_id,
-        ad_name  = ad_name,
-        duration = duration,
-        hashes   = {r["hash_value"]: r["time_offset"] for r in rows},
+        ad_id                = ad_id,
+        ad_name              = ad_name,
+        duration             = duration,
+        hashes               = {r["hash_value"]: r["time_offset"] for r in rows},
+        pessimistic_duration = pess_dur,
     )
+
+
+def _family_min_duration(conn, ad_id: int, fallback: float) -> float:
+    """
+    Return the shortest duration in this ad's variant family.
+    If the ad has no parent_ad_id and no children, returns its own duration.
+    Single indexed query — sub-millisecond on WAL mode.
+    """
+    try:
+        row = conn.execute(
+            "SELECT parent_ad_id FROM ads WHERE id = ?", (ad_id,)
+        ).fetchone()
+        root = (row["parent_ad_id"] or ad_id) if row else ad_id
+        result = conn.execute("""
+            SELECT MIN(duration_seconds) FROM ads
+            WHERE (id = ? OR parent_ad_id = ?) AND is_active = 1
+        """, (root, root)).fetchone()
+        return result[0] if (result and result[0]) else fallback
+    except Exception:
+        return fallback
+
+
+def _bulk_pessimistic_durations(conn) -> dict:
+    """
+    Build {ad_id → pessimistic_duration} for ALL active ads in one query.
+    Called once per heartbeat to refresh cached entries.
+
+    Groups ads by variant family (parent_ad_id), computes min(duration)
+    per family, and maps every ad_id to its family's minimum.
+    Ads with no family get their own duration as pessimistic.
+    """
+    rows = conn.execute("""
+        SELECT id,
+               COALESCE(parent_ad_id, id) AS root_id,
+               duration_seconds
+        FROM   ads
+        WHERE  is_active = 1
+    """).fetchall()
+
+    # Build root → min(duration) map
+    family_min: dict = {}
+    for r in rows:
+        root = r["root_id"]
+        dur  = r["duration_seconds"]
+        if root not in family_min or dur < family_min[root]:
+            family_min[root] = dur
+
+    # Map each ad_id to its family's min duration
+    return {r["id"]: family_min[r["root_id"]] for r in rows}
 
 
 def _query_l3(conn, hash_values: list, exclude_ids: set) -> list:
@@ -248,6 +335,8 @@ def _heartbeat(cfg, log) -> None:
     has changed is < 5 ms (two tiny SQL queries + set arithmetic).
     Hash loading only happens when ads are newly added, promoted, or demoted.
     """
+    global _last_heartbeat_ts
+
     l1_max      = cfg.cache.l1_size
     l2_max      = cfg.cache.l2_size
     window_days = cfg.cache.l1_window_days
@@ -272,18 +361,32 @@ def _heartbeat(cfg, log) -> None:
                         extra=_extra(PROC)
                     )
 
-                # ── 2. Load newly ingested ads → L2 tail ──────────────────
-                cached_ids = set(_l1) | set(_l2)
-                new_ids    = active_ids - cached_ids
-                for ad_id in new_ids:
-                    r = active_map[ad_id]
-                    entry = _load_entry(conn, ad_id, r["name"], r["duration_seconds"])
-                    if entry:
-                        _l2_insert_locked(entry, l2_max)
-                        log.info(
-                            "Cache: '%s' (id=%d) → L2 tail (new ingest)",
-                            r["name"], ad_id, extra=_extra(PROC)
+                # ── 2. Load genuinely new ads → L2 tail ───────────────────
+                # Only ads created SINCE the last heartbeat are "new".
+                # Uncached-but-old ads simply exceeded L2 capacity — they
+                # are correctly served by L3.  Loading all uncached ads
+                # every heartbeat causes constant O(vault_size) SQLite
+                # reads and log spam with zero detection benefit.
+                # The -10 second buffer absorbs clock jitter between
+                # the heartbeat timestamp and SQLite's CURRENT_TIMESTAMP.
+                new_rows = conn.execute("""
+                    SELECT id, name, duration_seconds FROM ads
+                    WHERE  is_active = 1
+                      AND  created_at >= datetime(?, 'unixepoch', '-10 seconds')
+                """, (_last_heartbeat_ts,)).fetchall()
+
+                for r in new_rows:
+                    ad_id = r["id"]
+                    if ad_id not in set(_l1) | set(_l2):
+                        entry = _load_entry(
+                            conn, ad_id, r["name"], r["duration_seconds"]
                         )
+                        if entry:
+                            _l2_insert_locked(entry, l2_max)
+                            log.info(
+                                "Cache: '%s' (id=%d) → L2 tail (new ingest)",
+                                r["name"], ad_id, extra=_extra(PROC)
+                            )
 
                 # ── 3. Recalculate L1 from 30-day mute_log stats ──────────
                 top_rows = conn.execute("""
@@ -347,12 +450,30 @@ def _heartbeat(cfg, log) -> None:
                         extra=_extra(PROC)
                     )
 
+                # ── 8. Refresh pessimistic durations ──────────────────────
+                # Single query builds family→min(duration) map, then update
+                # every cached entry.  Picks up any new variant links made
+                # by find_variant.py since the last heartbeat.
+                pess_map = _bulk_pessimistic_durations(conn)
+                for ad_id, entry in _l1.items():
+                    entry.pessimistic_duration = pess_map.get(
+                        ad_id, entry.duration
+                    )
+                for ad_id, entry in _l2.items():
+                    entry.pessimistic_duration = pess_map.get(
+                        ad_id, entry.duration
+                    )
+
                 log.info(
                     "♥ Cache heartbeat — L1=%d kings | L2=%d context | "
                     "L3=SQLite | vault=%d active ads",
                     len(_l1), len(_l2), len(active_ids),
                     extra=_extra(PROC)
                 )
+
+                # Mark heartbeat complete — next cycle uses this timestamp
+                # to detect only ads created after this moment as "new".
+                _last_heartbeat_ts = time.time()
 
         except sqlite3.Error as exc:
             log.error("Heartbeat DB error: %s", exc, extra=_extra(PROC))
@@ -556,14 +677,15 @@ def run(log_level: str = "INFO", log_dir: str = "logs") -> None:
                 publisher.send_multipart([
                     TOPIC_MATCH,
                     json.dumps({
-                        "ad_id":            best_entry.ad_id,
-                        "ad_name":          best_entry.ad_name,
-                        "duration":         best_entry.duration,
-                        "score":            best_score,
-                        "time_offset_secs": time_offset_secs,
-                        "query_ms":         round(query_ms, 1),
-                        "tier":             match_tier,
-                        "ts":               now,
+                        "ad_id":                best_entry.ad_id,
+                        "ad_name":              best_entry.ad_name,
+                        "duration":             best_entry.duration,
+                        "pessimistic_duration": best_entry.pessimistic_duration or best_entry.duration,
+                        "score":                best_score,
+                        "time_offset_secs":     time_offset_secs,
+                        "query_ms":             round(query_ms, 1),
+                        "tier":                 match_tier,
+                        "ts":                   now,
                     }).encode(),
                 ])
 

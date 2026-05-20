@@ -1,8 +1,8 @@
 -- ============================================================
--- AdMute Hybrid — Initial Schema
+-- AdMute Light — Initial Schema
 -- Migration 001
 --
--- This is the single authoritative schema for AdMute Hybrid.
+-- This is the single authoritative schema for AdMute Light.
 -- Every table, column, index, trigger, and seed value here
 -- is actively used by the running system.  Nothing speculative,
 -- nothing from abandoned v6 experiments.

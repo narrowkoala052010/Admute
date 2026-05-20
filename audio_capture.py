@@ -161,7 +161,7 @@ def run(log_level: str = "INFO", log_dir: str = "logs") -> None:
             raw = np.frombuffer(raw_bytes, dtype=np.int32)
 
             # Apply digital gain — boosts mic signal before processing
-            mono, peak = signal_utils.apply_digital_gain(raw, gain=30.0)
+            mono, peak = signal_utils.apply_digital_gain(raw, gain=25.0)
 
             rms = float(np.sqrt(np.mean(mono ** 2)))
 

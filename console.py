@@ -32,6 +32,7 @@ BRIGHT_RED    = "\033[91m"
 BRIGHT_GREEN  = "\033[92m"
 BRIGHT_YELLOW = "\033[93m"
 BRIGHT_BLUE   = "\033[94m"
+BRIGHT_MAGENTA = "\033[95m"
 BRIGHT_CYAN   = "\033[96m"
 BRIGHT_WHITE  = "\033[97m"
 
@@ -41,57 +42,37 @@ BG_YELLOW = "\033[43m"
 
 
 class AdMuteFormatter(logging.Formatter):
-    """
-    Custom log formatter that colour-codes by process name and level.
-    Injects [trace_id] if present for distributed debugging.
-    """
-
     PROC_COLOURS = {
         "AUDIO":  BRIGHT_BLUE,
         "FINGER": BRIGHT_CYAN,
         "MATCH":  BRIGHT_WHITE,
         "MUTE":   BRIGHT_RED,
-        "DAEMON": BRIGHT_MAGENTA if hasattr(__builtins__, 'BRIGHT_MAGENTA') else MAGENTA,
+        "DAEMON": BRIGHT_MAGENTA,
         "API":    YELLOW,
         "DB":     DIM + WHITE,
     }
 
-    def format(self, record: logging.LogRecord) -> str:
+    def format(self, record):
         ts    = time.strftime("%H:%M:%S")
         proc  = getattr(record, "proc", "SYS")
         trace = getattr(record, "trace_id", None)
-        
         color = self.PROC_COLOURS.get(proc, WHITE)
         tag   = f"{color}[{proc:<6}]{RESET}"
-        
-        # Telemetry trace injection
         trace_tag = f"{DIM}[{trace}]{RESET} " if trace else ""
-        
         msg   = record.getMessage()
         return f"{DIM}{ts}{RESET}  {tag}  {trace_tag}{msg}"
 
 
-def setup_logging(proc_name: str, log_level: str = "INFO",
-                  log_dir: str = "logs") -> logging.Logger:
-    """
-    Configure and return a logger for a daemon process.
-    Outputs to stderr (terminal) with colour + to a rotating file.
-    """
+def setup_logging(proc_name, log_level="INFO", log_dir="logs"):
     import logging.handlers
     from pathlib import Path
-
     Path(log_dir).mkdir(exist_ok=True)
-
     logger = logging.getLogger(f"admute.{proc_name.lower()}")
     logger.setLevel(getattr(logging, log_level.upper(), logging.INFO))
     logger.propagate = False
-
-    # ── Terminal handler (coloured) ──────────────────────────
     stream_h = logging.StreamHandler()
     stream_h.setFormatter(AdMuteFormatter())
     logger.addHandler(stream_h)
-
-    # ── File handler (plain text, rotating 5MB × 3) ──────────
     file_h = logging.handlers.RotatingFileHandler(
         Path(log_dir) / f"admute_{proc_name.lower()}.log",
         maxBytes=5 * 1024 * 1024,
@@ -103,22 +84,17 @@ def setup_logging(proc_name: str, log_level: str = "INFO",
         datefmt="%Y-%m-%d %H:%M:%S"
     ))
     logger.addHandler(file_h)
-
     return logger
 
 
-def _extra(proc: str, trace_id: str = None) -> dict:
-    """Helper to inject process name and optional trace ID into log records."""
+def _extra(proc, trace_id=None):
     d = {"proc": proc}
     if trace_id:
         d["trace_id"] = trace_id
     return d
 
 
-# ── VISUAL PRIMITIVES ─────────────────────────────────────────
-
-def conf_bar(score: int, threshold: int, width: int = 12) -> str:
-    """Render a unicode block progress bar for a confidence score."""
+def conf_bar(score, threshold, width=12):
     ratio  = min(score / max(threshold, 1), 1.5)
     filled = int(ratio * width)
     bar    = "█" * min(filled, width) + "░" * max(0, width - filled)
@@ -132,8 +108,7 @@ def conf_bar(score: int, threshold: int, width: int = 12) -> str:
         return f"{DIM}{bar}{RESET}"
 
 
-def snr_bar(snr_db: float, width: int = 8) -> str:
-    """Render an SNR quality bar."""
+def snr_bar(snr_db, width=8):
     ratio  = min(max(snr_db, 0) / 60.0, 1.0)
     filled = int(ratio * width)
     bar    = "▓" * filled + "░" * (width - filled)
@@ -145,17 +120,19 @@ def snr_bar(snr_db: float, width: int = 8) -> str:
         return f"{RED}{bar} {snr_db:.0f}dB{RESET}"
 
 
-# ── FEEDBACK FORMATTERS ───────────────────────────────────────
-
-def fmt_audio_heartbeat(peak: float, snr_db: float,
-                        chunks_total: int) -> str:
-    bar    = snr_bar(snr_db)
-    status = f"{DIM}silence{RESET}" if peak < 0.001 else f"peak={peak:.3f}"
+def fmt_audio_heartbeat(peak, snr_db, chunks_total):
+    bar = snr_bar(snr_db)
+    if peak < 0.001:
+        status = f"{DIM}silence{RESET}"
+    elif peak >= 0.95:
+        # Signal is clipping or near-clipping — hashes will be unreliable
+        status = f"{BRIGHT_RED}{BOLD}peak={peak:.3f} ⚠ CLIPPING{RESET}"
+    else:
+        status = f"peak={peak:.3f}"
     return f"♥  SNR {bar}  {status}  chunks={chunks_total:,}"
 
 
-def fmt_finger_heartbeat(avg_ms: float, hashes_total: int,
-                         workers: int) -> str:
+def fmt_finger_heartbeat(avg_ms, hashes_total, workers):
     speed = f"{BRIGHT_GREEN}fast{RESET}" if avg_ms < 60 else \
             f"{YELLOW}ok{RESET}"        if avg_ms < 100 else \
             f"{RED}slow!{RESET}"
@@ -163,7 +140,7 @@ def fmt_finger_heartbeat(avg_ms: float, hashes_total: int,
             f"hashes={hashes_total:,}  workers={workers}")
 
 
-def fmt_strike(ad_name: str, score: int, threshold: int) -> str:
+def fmt_strike(ad_name, score, threshold):
     bar = conf_bar(score, threshold)
     pct = int(score / threshold * 100)
     return (f"{YELLOW}· strike ·{RESET}   "
@@ -171,7 +148,7 @@ def fmt_strike(ad_name: str, score: int, threshold: int) -> str:
             f"conf={score:>4}/{threshold}  ({pct}%)  {bar}")
 
 
-def fmt_near_miss(ad_name: str, score: int, threshold: int) -> str:
+def fmt_near_miss(ad_name, score, threshold):
     bar = conf_bar(score, threshold)
     pct = int(score / threshold * 100)
     return (f"{BRIGHT_YELLOW}◉ NEAR MISS{RESET}  "
@@ -179,8 +156,7 @@ def fmt_near_miss(ad_name: str, score: int, threshold: int) -> str:
             f"conf={score:>4}/{threshold}  ({pct}%)  {bar}")
 
 
-def fmt_match(ad_name: str, score: int, threshold: int,
-              duration: float) -> str:
+def fmt_match(ad_name, score, threshold, duration):
     bar = conf_bar(score, threshold)
     pct = int(score / threshold * 100)
     return (f"{BOLD}{BG_GREEN} ██ MATCH ██ {RESET}  "
@@ -189,32 +165,31 @@ def fmt_match(ad_name: str, score: int, threshold: int,
             f"{BOLD}{duration:.1f}s{RESET}")
 
 
-def fmt_mute_sent(backend: str, detail: str, ad_name: str,
-                  duration: float) -> str:
+def fmt_mute_sent(backend, detail, ad_name, duration):
     return (f"{BOLD}{BG_RED} ► MUTING {RESET}  "
             f"backend={backend}  {detail}  "
             f"ad=\"{ad_name}\"  "
             f"unmute in {duration:.1f}s")
 
 
-def fmt_unmute_sent(actual_duration: float, ad_name: str) -> str:
+def fmt_unmute_sent(actual_duration, ad_name):
     return (f"{BOLD}{BG_GREEN} ◄ UNMUTE {RESET}  "
             f"ad=\"{ad_name}\"  actual={actual_duration:.1f}s")
 
 
-def fmt_false_positive(ad_name: str) -> str:
+def fmt_false_positive(ad_name):
     return (f"{BRIGHT_RED}✕ FALSE POSITIVE{RESET}  "
             f"flagged \"{ad_name}\"  unmuting immediately")
 
 
-def fmt_no_candidates(vault_size: int) -> str:
+def fmt_no_candidates(vault_size):
     if vault_size == 0:
         return (f"{DIM}○  vault is empty — record some ads "
                 f"first via the web UI{RESET}")
     return f"{DIM}○  no match  vault={vault_size} ads{RESET}"
 
 
-def fmt_vault_empty_periodic() -> str:
+def fmt_vault_empty_periodic():
     return (f"{YELLOW}⚠  Vault is empty.{RESET}  "
             f"Open the web UI at http://<pi-ip>:5001 "
             f"and record your first ad.")

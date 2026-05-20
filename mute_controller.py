@@ -1,7 +1,9 @@
 """
-AdMute v4 — Process 4: MuteController (CEC Edition)
+AdMute Light
+Copyright (c) 2026 Carlos C. (narrowkoala052010)
 
-Replaces the blind IR toggle with HDMI-CEC via python-cec (libcec).
+Part of the AdMute Project.
+Licensed under the MIT License — see LICENSE for details.
 
 Key improvements over the IR backend:
   • Real mute state querying via CEC "Give Audio Status" (opcode 0x71).
